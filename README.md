@@ -1,5 +1,9 @@
+# ICU4C
+
 ICU is an internationalization library supported by IBM. Home of the project
 is [http://www.icu-project.org/](http://www.icu-project.org/)
+
+# Building for PHP
 
 To build ICU with native Microsoft tools follow the instructions in the readme.html#HowToBuildCygwin from
 the source directory. Note that bash, make and several other UNIX tools are
