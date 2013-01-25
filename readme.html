@@ -3,9 +3,9 @@
 
 <html lang="en-US" xmlns="http://www.w3.org/1999/xhtml" xml:lang="en-US">
   <head>
-    <title>ReadMe for ICU 49.1.1</title>
+    <title>ReadMe for ICU 50.1.2</title>
     <meta name="COPYRIGHT" content=
-    "Copyright (c) 1997-2012 IBM Corporation and others. All Rights Reserved." />
+    "Copyright (c) 1997-2013 IBM Corporation and others. All Rights Reserved." />
     <meta name="KEYWORDS" content=
     "ICU; International Components for Unicode; ICU4C; what's new; readme; read me; introduction; downloads; downloading; building; installation;" />
     <meta name="DESCRIPTION" content=
@@ -16,16 +16,16 @@
 
   <body class="draft">
     <h1>International Components for Unicode<br />
-     <abbr title="International Components for Unicode">ICU</abbr> 49.1.1 ReadMe</h1>
+     <abbr title="International Components for Unicode">ICU</abbr> 50.1.2 ReadMe</h1>
 
-  	<!--
-  	<p><b>Note:</b> This is a development milestone release of ICU4C 49.
-    This milestone is intended for those wishing to get an early look at ICU 49 new features and API changes.
-    It is not recommended for production use.
-    </p>
-    -->
-    <p>Last updated: 2012-Apr-04<br />
-     Copyright &copy; 1997-2012 International Business Machines Corporation and
+    <!--<p><b>Note:</b> This is a development milestone release of ICU4C 50.
+    This milestone is intended for those wishing to get an early look at ICU 50 new features and API changes.
+    It is not recommended for production use.</p>-->
+    <!--<p><b>Note:</b> This is a release candidate version of ICU4C 50.
+    It is not recommended for production use.</p>-->
+
+    <p>Last updated: 2013-Jan-10<br />
+     Copyright &copy; 1997-2013 International Business Machines Corporation and
     others. All Rights Reserved.</p>
     <!-- Remember that there is a copyright at the end too -->
     <hr />
@@ -110,7 +110,7 @@
 
       <li>Character set conversions with support for over 220 codepages</li>
 
-      <li>Locale data for more than 260 locales</li>
+      <li>Locale data for more than 290 locales</li>
 
       <li>Language sensitive text collation (sorting) and searching based on the
       Unicode Collation Algorithm (=ISO 14651)</li>
@@ -217,38 +217,62 @@
 
     <p>The following list concentrates on <em>changes that affect existing
     applications migrating from previous ICU releases</em>.
-    For more news about
-    this release, see the <a href="http://site.icu-project.org/download/">ICU
-    download page</a>.</p>
+    For more news about this release, see the
+    <!--
+    <a href="http://site.icu-project.org/download/">ICU download page</a>.
+    -->
+    <a href="http://site.icu-project.org/download/milestone">ICU milestone download page</a>.
+    </p>
 
-    <h3>C++ namespace support required</h3>
-    <p>ICU4C 49 requires C++ namespace support.
-    As a result, for example, rather than <code>U_NAMESPACE_QUALIFIER UnicodeString</code>
-    you can now simply write <code>icu::UnicodeString</code>.</p>
+    <h3>Thread safety support cannot be removed</h3>
+    <p>ICU4C 50 dropped support for the --enable-threads/--disable-threads configure option
+    and the uconfig.h <code>ICU_USE_THREADS</code> switch.
+    ICU4C 50 and higher is always built with multi-threading safety support.
+    ICU4C has never created threads in its libraries.</p>
 
-    <h3>One shared platform.h</h3>
-    <p>ICU4C 49 does not generate any source code files via autoconf any more.
-    Instead, platform.h itself is now a normal source header file,
-    and determines platform-specific settings via <code>#if ...</code> etc.</p>
+    <p>If you need to prevent ICU from using thread safe mutexes when your application does
+    not create threads, then you can use the --enable-weak-threads configure option.
+    The --enable-weak-threads configure option will cause ICU to weakly reference the
+    pthread mutex functions, and the stub implementations in the C runtime will be used.
+    If this configure option does not work on your platform, then you can call
+    <code>u_setMutexFunctions()</code> and <code>u_setAtomicIncDecFunctions()</code>
+    with your own empty implementations.</p>
 
-    <p>(See the <a href="http://userguide.icu-project.org/howtouseicu">User Guide How To Use ICU chapter</a>.)</p>
+    <h3>The default compilers have changed</h3>
+    <p>ICU has changed the compilers chosen by default. If the clang and clang++ compilers
+    are available, those will be used instead of gcc and g++. If the clang compilers
+    are not available, then gcc and g++ will be used just as before. The clang++ compiler
+    provides C++11 support and some optimizations that are helpful to ICU. The API
+    remains the same between these two sets of compilers, but ICU can internally leverage
+    language features and optimizations that are available in clang++.</p>
 
-    <p>As a result, it is easier to cross-compile ICU4C and/or use different build systems.
-    No more headers are <code>#include</code>d from the build-output directory,
-    and all platforms use the same set of source code files.</p>
+    <p>If you need to force ICU to compile with gcc and g++, then you can use the following
+    from the command line in the source directory:</p>
 
-    <p>However, it is likely that ICU4C 49 will not compile on some platforms
-    (non-POSIX and/or older/unusual compilers etc.) that the ICU team did not test.
-    As a temporary workaround, any platform-dependent macro for which <code>platform.h</code>
-    does not determine the correct value can be predefined via <code>CPPFLAGS</code>
-    or by adding an explicit <code>#define ...</code> into <code>platform.h</code>
-    before it first tests that macro.</p>
+<pre>
+<samp>./configure CC=gcc CXX=g++ CFLAGS=-O3 CXXFLAGS=-O3</samp>
+</pre>
 
-    <p>Please submit a bug ticket per platform with details about your compiler,
-    its version and its predefined macros.
-    (For example, preprocessing an empty source file with gcc's <code>-dM</code> option
-    outputs all of gcc's predefined macros: <code>gcc -E -dM -x c /dev/null | sort</code>)
-    A patch to fix the problem would be welcome too!</p>
+    <h3>C++ Collator subclassing-API breaking changes</h3>
+    <p>We have made some changes to the C++ Collator API for ICU 50
+    that will make it easier to use and implement the Collator but
+    which are incompatible for subclasses.
+    If there are subclasses, they will have to be modified as well.
+    It will be easy to adapt subclass source code, if there is any.
+    We think it is unlikely (or at least rare) that users write subclasses of the C++ Collator,
+    given the number of virtual methods and the complexities of a collation implementation.</p>
+
+    <p>For details see the email "ICU4C C++ Collator subclassing-API breaking changes"
+    sent on 2012-jul-25 to the icu-design and icu-support
+    <a href="http://site.icu-project.org/contacts">mailing lists</a>,
+    and <a href="http://bugs.icu-project.org/trac/ticket/9346">ICU ticket #9346</a>,
+    including the <a href="http://bugs.icu-project.org/trac/review/9346">changes for that ticket</a>.</p>
+
+    <p>In particular, the <code>class TestCollator</code> in
+    <a href="http://bugs.icu-project.org/trac/browser/icu/trunk/source/test/intltest/apicoll.cpp"><code>source/test/intltest/apicoll.cpp</code></a>
+    <a href="http://bugs.icu-project.org/trac/changeset/32100#file5">illustrates how a subclass needs to be changed</a>.
+    However, note that the TestCollator was also simplified slightly;
+    not all changes made there were strictly required for the API signature changes.</p>
 
     <h2><a name="Download" href="#Download" id="Download">How To Download the
     Source Code</a></h2>
@@ -940,14 +964,9 @@
     <ul>
       <li><tt>--disable-renaming</tt></li>
 
-      <li><tt>--disable-threading</tt> (This flag does disable threading in ICU,
-      but the resulting ICU library will still be linked with MSVC's multithread DLL)</li>
-
       <li><tt>--enable-tracing</tt></li>
 
       <li><tt>--enable-rpath</tt></li>
-
-      <li><tt>--with-iostream</tt></li>
 
       <li><tt>--enable-static</tt> (Requires that U_STATIC_IMPLEMENTATION be
       defined in user code that links against ICU's static libraries.)</li>
@@ -983,23 +1002,31 @@
 
       <li>Change directory to the "icu/source".</li>
 
-      <li>Run <tt>"chmod +x runConfigureICU configure install-sh"</tt> because
+      <li>Run <span style='font-family: monospace;'>"chmod +x runConfigureICU configure install-sh"</span> because
       these files may have the wrong permissions.</li>
 
-      <li>Run the <tt><a href="source/runConfigureICU">runConfigureICU</a></tt>
+      <li>Run the <span style='font-family: monospace;'><a href="source/runConfigureICU">runConfigureICU</a></span>
       script for your platform. (See <a href="#HowToConfigureICU">configuration
       note</a> below).</li>
 
-      <li>Type <tt>"gmake"</tt> (or "make" if GNU make is the default make on
+      <li>Type <span style='font-family: monospace;'>"gmake"</span> (or "make" if GNU make is the default make on
       your platform) to compile the libraries and all the data files. The proper
       name of the GNU make command is printed at the end of the configuration
-      run, as in "You must use gmake to compile ICU".</li>
+      run, as in "You must use gmake to compile ICU".
+      <br/>
+      Note that the compilation command output may be simplified on your platform.  If this is the case, you will see just:
+      <blockquote><p style='background-color: #ddd; font-family: monospace; font-size: small'>gcc ... stubdata.c</p></blockquote>
+      rather than
+      <blockquote><p style='background-color: #ddd; font-family: monospace; font-size: small'>gcc  -DU_NO_DEFAULT_INCLUDE_UTF_HEADERS=1 -D_REENTRANT -I../common -DU_ATTRIBUTE_DEPRECATED= -O2 -Wall -std=c99 -pedantic -Wshadow -Wpointer-arith -Wmissing-prototypes -Wwrite-strings -c -DPIC -fPIC -o stubdata.o stubdata.c</p></blockquote>
+      .<br/>
+      If you need to see the whole compilation line,  use <span style='font-family: monospace;'>"gmake VERBOSE=1"</span>. The full compilation line will print if an error occurs.
+      </li>
 
-      <li>Optionally, type <tt>"gmake check"</tt> to run the test suite, which
+      <li>Optionally, type <span style='font-family: monospace;'>"gmake check"</span> to run the test suite, which
       checks for ICU's functionality integrity (See <a href=
       "#HowToTestWithoutGmake">testing note</a> below).</li>
 
-      <li>Type <tt>"gmake install"</tt> to install ICU. If you used the --prefix=
+      <li>Type <span style='font-family: monospace;'>"gmake install"</span> to install ICU. If you used the --prefix=
       option on configure or runConfigureICU, ICU will be installed to the
       directory you specified. (See <a href="#HowToInstallICU">installation
       note</a> below).</li>
@@ -1095,17 +1122,18 @@
       XPLINK. The XPLINK option, which is available for z/OS 1.2 and later,
       requires the PTF PQ69418 to build XPLINK enabled binaries.</li>
 
-      <li>Currently in ICU 3.0, there is an issue with building on z/OS without
-      XPLINK and with the C++ iostream. By default, the iostream library on z/OS
-      is XPLINK enabled. If you are not building an XPLINK enabled version of
-      ICU, you should use the <code>--with-iostream=old</code> configure option
-      when using runConfigureICU. This will prevent applications that use the
-      icuio library from crashing.</li>
-      
-      <li>Also note that on current versions of z/OS, the <a href='http://www-01.ibm.com/support/docview.wss?uid=swg21202407&amp;wv=1'>XPLINK version (C128) of the
-      C++ standard library is standard.</a> Therefore you may see an error when running
-      with XPLINK disabled. To avoid this error, set the following environment variable or similar:
-      	<pre><a href='http://www-01.ibm.com/support/docview.wss?uid=swg21376279'>export _CXX_PSYSIX="CEE.SCEELIB(C128N)":"CBC.SCLBSID(IOSTREAM,COMPLEX)"</a></pre>
+      <li>ICU requires XPLINK for the icuio library. If you want to use the
+      rest of ICU without XPLINK, then you must use the --disable-icuio
+      configure option.</li>
+
+      <li>The latest versions of z/OS use <a
+      href="http://www.ibm.com/support/docview.wss?uid=swg2120240">XPLINK
+      version (C128) of the C++ standard library</a> by default. You may see <a
+      href="http://www.ibm.com/support/docview.wss?uid=swg21376279">an
+      error</a> when running with XPLINK disabled. To avoid this error,
+      set the following environment variable or similar:
+
+<pre><samp>export _CXX_PSYSIX="CEE.SCEELIB(C128N)":"CBC.SCLBSID(IOSTREAM,COMPLEX)"</samp></pre>
       </li>
       
 
@@ -1500,16 +1528,12 @@ gnumake</pre>
     "ImportantNotesHPUX">Using ICU in a Multithreaded Environment on
     HP-UX</a></h4>
 
-    <p>If you are building ICU with a newer aCC compiler and you are planning on
-    using the older &lt;iostream.h&gt; instead of the newer &lt;iostream&gt;, you
-    will need to use a special configure flag before building ICU. By default,
-    the aCC <a href="http://docs.hp.com/en/1405/options.htm#optioncap-AA">-AA</a>
-    flag is used on HP-UX when the compiler supports that option in order to make
-    ICU thread safe with RogueWave and other libraries using the 2.0 Standard C++
-    library. Your applications that use ICU will also need to use the <a href=
-    "http://docs.hp.com/en/1405/options.htm#optioncap-AA">-AA</a> compiler flag.
-    To turn off this behavior in ICU, you will need to use the --with-iostream=old
-    configure option when you first use runConfigureICU.</p>
+    <p>When ICU is built with aCC on HP-UX, the <a
+    href="http://h21007.www2.hp.com/portal/site/dspp/menuitem.863c3e4cbcdc3f3515b49c108973a801?ciid=eb08b3f1eee02110b3f1eee02110275d6e10RCRD">-AA</a>
+    compiler flag is used. It is required in order to use the latest
+    &lt;iostream&gt; API in a thread safe manner. This compiler flag affects the
+    version of the C++ library being used. Your applications will also need to
+    be compiled with -AA in order to use ICU.</p>
 
     <h4><a name="ImportantNotesSolaris" href="#ImportantNotesSolaris" id=
     "ImportantNotesSolaris">Using ICU in a Multithreaded Environment on
@@ -1687,9 +1711,7 @@ gnumake</pre>
           <li>U_EXPORT and U_IMPORT for specifying dynamic library import and
           export</li>
 
-          <li>&lt;iostream&gt; usability</li>
-
-          <li>Thread safety usability</li>
+          <li>String handling support for the char16_t and wchar_t types.</li>
         </ul>
         <br />
       </li>
