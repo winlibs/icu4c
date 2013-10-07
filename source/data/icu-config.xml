@@ -1,7 +1,7 @@
 <!--
 /*
 *******************************************************************************
-* Copyright (C) 2005-2012, International Business Machines Corporation and    *
+* Copyright (C) 2005-2013, International Business Machines Corporation and    *
 * others. All Rights Reserved.	                                         *
 *******************************************************************************
 */
@@ -419,13 +419,20 @@
 		<include locales="mk_MK"/>
 		<include locales="ml"/>
 		<include locales="ml_IN"/>
+		<include locales="mn"/>
+		<include locales="mn_Cyrl"/>
+		<include locales="mn_Cyrl_MN"/>
 		<include locales="mo"/>
 		<include locales="mr"/>
 		<include locales="mr_IN"/>
 		<include locales="ms"/>
 		<include locales="ms_BN"/>
-		<include locales="ms_SG"/>
+		<include locales="ms_Latn"/>
+		<include locales="ms_Latn_BN"/>
+		<include locales="ms_Latn_MY"/>
+		<include locales="ms_Latn_SG"/>
 		<include locales="ms_MY"/>
+		<include locales="ms_SG"/>
 		<include locales="mt"/>
 		<include locales="mt_MT"/>
 		<include locales="mua"/>
@@ -516,6 +523,7 @@
 		<include locales="sg"/>
 		<include locales="sg_CF"/>
 		<include locales="sq_MK"/>
+		<include locales="sq_XK"/>
 		<include locales="sh"/>
 		<include locales="sh_BA"/>
 		<include locales="sh_CS"/>
@@ -547,12 +555,14 @@
 		<include locales="sr_Latn_ME" />
 		<include locales="sr_Latn_RS" />
 		<include locales="sr_Latn_CS" />
+		<include locales="sr_Latn_XK" />
 		<include locales="sr_Latn_YU" />
 		<include locales="sr_Cyrl"/>
 		<include locales="sr_Cyrl_BA"/>
 		<include locales="sr_Cyrl_ME" />
 		<include locales="sr_Cyrl_RS" />
 		<include locales="sr_Cyrl_CS" />
+		<include locales="sr_Cyrl_XK" />
 		<include locales="sr_Cyrl_YU" />
 		<include locales="sr_BA"/>
 		<include locales="sr_ME"/>

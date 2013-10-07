@@ -1,6 +1,6 @@
 /********************************************************************
  * COPYRIGHT:
- * Copyright (c) 1997-2012, International Business Machines Corporation and
+ * Copyright (c) 1997-2013, International Business Machines Corporation and
  * others. All Rights Reserved.
  ********************************************************************/
 
@@ -233,6 +233,14 @@ IntlTest::appendHex(uint32_t number,
         0x41, 0x42, 0x43, 0x44, 0x45, 0x46, 0
     }; /* "0123456789ABCDEF" */
 
+    if (digits < 0) {  // auto-digits
+        digits = 2;
+        uint32_t max = 0xff;
+        while (number > max) {
+            digits += 2;
+            max = (max << 8) | 0xff;
+        }
+    }
     switch (digits)
     {
     case 8:
@@ -256,6 +264,13 @@ IntlTest::appendHex(uint32_t number,
         target += "**";
     }
     return target;
+}
+
+UnicodeString
+IntlTest::toHex(uint32_t number, int32_t digits) {
+    UnicodeString result;
+    appendHex(number, digits, result);
+    return result;
 }
 
 static inline UBool isPrintable(UChar32 c) {
@@ -1639,15 +1654,28 @@ static UnicodeString& escape(const UnicodeString& s, UnicodeString& result) {
 
 #define VERBOSE_ASSERTIONS
 
-UBool IntlTest::assertTrue(const char* message, UBool condition, UBool quiet, UBool possibleDataError) {
-    if (!condition) {
-        if (possibleDataError) {
-            dataerrln("FAIL: assertTrue() failed: %s", message);
-        } else {
-            errln("FAIL: assertTrue() failed: %s", message);
+UBool IntlTest::assertTrue(const char* message, UBool condition, UBool quiet, UBool possibleDataError, const char *file, int line) {
+    if (file != NULL) {
+        if (!condition) {
+            if (possibleDataError) {
+                dataerrln("%s:%d: FAIL: assertTrue() failed: %s", file, line, message);
+            } else {
+                errln("%s:%d: FAIL: assertTrue() failed: %s", file, line, message);
+            }
+        } else if (!quiet) {
+            logln("%s:%d: Ok: %s", file, line, message);
         }
-    } else if (!quiet) {
-        logln("Ok: %s", message);
+    } else {
+        if (!condition) {
+            if (possibleDataError) {
+                dataerrln("FAIL: assertTrue() failed: %s", message);
+            } else {
+                errln("FAIL: assertTrue() failed: %s", message);
+            }
+        } else if (!quiet) {
+            logln("Ok: %s", message);
+        }
+
     }
     return condition;
 }
@@ -1710,6 +1738,23 @@ UBool IntlTest::assertEquals(const char* message,
 #ifdef VERBOSE_ASSERTIONS
     else {
         logln((UnicodeString)"Ok: " + message + "; got \"" + actual + "\"");
+    }
+#endif
+    return TRUE;
+}
+
+UBool IntlTest::assertEquals(const char* message,
+                             int32_t expected,
+                             int32_t actual) {
+    if (expected != actual) {
+        errln((UnicodeString)"FAIL: " + message + "; got " +
+              actual + "=0x" + toHex(actual) +
+              "; expected " + expected + "=0x" + toHex(expected));
+        return FALSE;
+    }
+#ifdef VERBOSE_ASSERTIONS
+    else {
+        logln((UnicodeString)"Ok: " + message + "; got " + actual + "=0x" + toHex(actual));
     }
 #endif
     return TRUE;

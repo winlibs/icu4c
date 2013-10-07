@@ -1,7 +1,7 @@
 /*
 ******************************************************************************
 *
-*   Copyright (C) 1997-2012, International Business Machines
+*   Copyright (C) 1997-2013, International Business Machines
 *   Corporation and others.  All Rights Reserved.
 *
 ******************************************************************************
@@ -97,15 +97,16 @@
 #   define ICU_NO_USER_DATA_OVERRIDE 1
 #elif U_PLATFORM == U_PF_OS390
 #   include "unicode/ucnv.h"   /* Needed for UCNV_SWAP_LFNL_OPTION_STRING */
-#elif U_PLATFORM_IS_DARWIN_BASED || U_PLATFORM_IS_LINUX_BASED || U_PLATFORM == U_PF_BSD
+#elif U_PLATFORM_IS_DARWIN_BASED || U_PLATFORM_IS_LINUX_BASED || U_PLATFORM == U_PF_BSD || U_PLATFORM == U_PF_SOLARIS
 #   include <limits.h>
 #   include <unistd.h>
+#   if U_PLATFORM == U_PF_SOLARIS
+#       ifndef _XPG4_2
+#           define _XPG4_2
+#       endif
+#   endif
 #elif U_PLATFORM == U_PF_QNX
 #   include <sys/neutrino.h>
-#elif U_PLATFORM == U_PF_SOLARIS
-#   ifndef _XPG4_2
-#       define _XPG4_2
-#   endif
 #endif
 
 #if (U_PF_MINGW <= U_PLATFORM && U_PLATFORM <= U_PF_CYGWIN) && defined(__STRICT_ANSI__)
@@ -671,12 +672,16 @@ uprv_timezone()
 extern U_IMPORT char *U_TZNAME[];
 #endif
 
-#if !UCONFIG_NO_FILE_IO && (U_PLATFORM_IS_DARWIN_BASED || U_PLATFORM_IS_LINUX_BASED || U_PLATFORM == U_PF_BSD)
+#if !UCONFIG_NO_FILE_IO && (U_PLATFORM_IS_DARWIN_BASED || U_PLATFORM_IS_LINUX_BASED || U_PLATFORM == U_PF_BSD || U_PLATFORM == U_PF_SOLARIS)
 /* These platforms are likely to use Olson timezone IDs. */
 #define CHECK_LOCALTIME_LINK 1
 #if U_PLATFORM_IS_DARWIN_BASED
 #include <tzfile.h>
 #define TZZONEINFO      (TZDIR "/")
+#elif U_PLATFORM == U_PF_SOLARIS
+#define TZDEFAULT       "/etc/localtime"
+#define TZZONEINFO      "/usr/share/lib/zoneinfo/"
+#define TZ_ENV_CHECK    "localtime"
 #else
 #define TZDEFAULT       "/etc/localtime"
 #define TZZONEINFO      "/usr/share/zoneinfo/"
@@ -1006,8 +1011,12 @@ uprv_tzname(int n)
 /* This code can be temporarily disabled to test tzname resolution later on. */
 #ifndef DEBUG_TZNAME
     tzid = getenv("TZ");
-    if (tzid != NULL && isValidOlsonID(tzid))
-    {
+    if (tzid != NULL && isValidOlsonID(tzid)
+#if U_PLATFORM == U_PF_SOLARIS
+    /* When TZ equals localtime on Solaris, check the /etc/localtime file. */
+        && uprv_strcmp(tzid, TZ_ENV_CHECK) != 0
+#endif
+    ) {
         /* This might be a good Olson ID. */
         skipZoneIDPrefix(&tzid);
         return tzid;
@@ -1111,7 +1120,7 @@ uprv_tzname(int n)
 /* Get and set the ICU data directory --------------------------------------- */
 
 static char *gDataDirectory = NULL;
-#if U_POSIX_LOCALE
+#if U_POSIX_LOCALE || U_PLATFORM_USES_ONLY_WIN32_API
  static char *gCorrectedPOSIXLocale = NULL; /* Heap allocated */
 #endif
 
@@ -1121,7 +1130,7 @@ static UBool U_CALLCONV putil_cleanup(void)
         uprv_free(gDataDirectory);
     }
     gDataDirectory = NULL;
-#if U_POSIX_LOCALE
+#if U_POSIX_LOCALE || U_PLATFORM_USES_ONLY_WIN32_API
     if (gCorrectedPOSIXLocale) {
         uprv_free(gCorrectedPOSIXLocale);
         gCorrectedPOSIXLocale = NULL;
@@ -1596,14 +1605,31 @@ The leftmost codepage (.xxx) wins.
     return posixID;
 
 #elif U_PLATFORM_USES_ONLY_WIN32_API
+#define POSIX_LOCALE_CAPACITY 64
     UErrorCode status = U_ZERO_ERROR;
-    LCID id = GetThreadLocale();
-    const char* locID = uprv_convertToPosix(id, &status);
+    char *correctedPOSIXLocale = 0;
 
-    if (U_FAILURE(status)) {
-        locID = "en_US";
+    if (gCorrectedPOSIXLocale != NULL) {
+        return gCorrectedPOSIXLocale;
     }
-    return locID;
+
+    LCID id = GetThreadLocale();
+    correctedPOSIXLocale = static_cast<char *>(uprv_malloc(POSIX_LOCALE_CAPACITY + 1));
+    if (correctedPOSIXLocale) {
+        int32_t posixLen = uprv_convertToPosix(id, correctedPOSIXLocale, POSIX_LOCALE_CAPACITY, &status);
+        if (U_SUCCESS(status)) {
+            *(correctedPOSIXLocale + posixLen) = 0;
+            gCorrectedPOSIXLocale = correctedPOSIXLocale;
+            ucln_common_registerCleanup(UCLN_COMMON_PUTIL, putil_cleanup);
+        } else {
+            uprv_free(correctedPOSIXLocale);
+        }
+    }
+
+    if (gCorrectedPOSIXLocale == NULL) {
+        return "en_US";
+    }
+    return gCorrectedPOSIXLocale;
 
 #elif U_PLATFORM == U_PF_CLASSIC_MACOS
     int32_t script = MAC_LC_INIT_NUMBER;

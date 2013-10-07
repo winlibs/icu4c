@@ -1,7 +1,7 @@
 
 /*
  *
- * (C) Copyright IBM Corp. 1998-2013 - All Rights Reserved
+ * (C) Copyright IBM Corp. 1998-2012 - All Rights Reserved
  *
  */
 
@@ -9,21 +9,10 @@
 #define __LEFONTINSTANCE_H
 
 #include "LETypes.h"
-
 /**
  * \file 
  * \brief C++ API: Layout Engine Font Instance object
  */
-
-/**
- * \def LE_CONFIG_FONTINSTANCE_LENGTH
- * @internal
- * Set this to 1 to enable a virtual function on LEFontInstance which takes a font length, this is for compatibility with HarfBuzz. This is off by default in ICU 50, but enabled by default in ICU 51+
- */
-#ifndef LE_CONFIG_FONTINSTANCE_LENGTH
-#define LE_CONFIG_FONTINSTANCE_LENGTH 0
-#endif
-
 
 U_NAMESPACE_BEGIN
 
@@ -176,8 +165,6 @@ public:
      */
     virtual const void *getFontTable(LETag tableTag) const = 0;
 
-
-#if LE_CONFIG_FONTINSTANCE_LENGTH
     /**
      * This method reads a table from the font. Note that in general,
      * it only makes sense to call this method on an <code>LEFontInstance</code>
@@ -196,7 +183,6 @@ public:
      * @internal
      */
     virtual const void* getFontTable(LETag tableTag, size_t &length) const { length=-1; return getFontTable(tableTag); }  /* -1 = unknown length */
-#endif
 
     /**
      * This method is used to determine if the font can

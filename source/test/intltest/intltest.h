@@ -1,6 +1,6 @@
 /********************************************************************
  * COPYRIGHT: 
- * Copyright (c) 1997-2012, International Business Machines Corporation and
+ * Copyright (c) 1997-2013, International Business Machines Corporation and
  * others. All Rights Reserved.
  ********************************************************************/
 
@@ -120,6 +120,9 @@ UnicodeString toString(int32_t n);
         break; \
     }
 
+#define TEST_ASSERT_TRUE(x) \
+  assertTrue(#x, (x), FALSE, FALSE, __FILE__, __LINE__)
+
 class IntlTest : public TestLog {
 public:
 
@@ -231,13 +234,14 @@ public:
 
 protected:
     /* JUnit-like assertions. Each returns TRUE if it succeeds. */
-    UBool assertTrue(const char* message, UBool condition, UBool quiet=FALSE, UBool possibleDataError=FALSE);
+    UBool assertTrue(const char* message, UBool condition, UBool quiet=FALSE, UBool possibleDataError=FALSE, const char *file=NULL, int line=0);
     UBool assertFalse(const char* message, UBool condition, UBool quiet=FALSE);
     UBool assertSuccess(const char* message, UErrorCode ec, UBool possibleDataError=FALSE);
     UBool assertEquals(const char* message, const UnicodeString& expected,
                        const UnicodeString& actual, UBool possibleDataError=FALSE);
     UBool assertEquals(const char* message, const char* expected,
                        const char* actual);
+    UBool assertEquals(const char* message, int32_t expected, int32_t actual);
 #if !UCONFIG_NO_FORMATTING
     UBool assertEquals(const char* message, const Formattable& expected,
                        const Formattable& actual);
@@ -296,7 +300,12 @@ protected:
 
     static UnicodeString &prettify(const UnicodeString &source, UnicodeString &target);
     static UnicodeString prettify(const UnicodeString &source, UBool parseBackslash=FALSE);
+    // digits=-1 determines the number of digits automatically
     static UnicodeString &appendHex(uint32_t number, int32_t digits, UnicodeString &target);
+    static UnicodeString toHex(uint32_t number, int32_t digits=-1);
+    static inline UnicodeString toHex(int32_t number, int32_t digits=-1) {
+        return toHex((uint32_t)number, digits);
+    }
 
 public:
     static void setICU_DATA();       // Set up ICU_DATA if necessary.
