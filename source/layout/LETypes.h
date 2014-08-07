@@ -272,10 +272,18 @@ typedef struct LEPoint LEPoint;
 
 #ifndef U_HIDE_INTERNAL_API
 
+/**
+ * \def
+ * @internal
+ */
 #ifndef LE_ASSERT_BAD_FONT
 #define LE_ASSERT_BAD_FONT 0
 #endif
 
+/**
+ * \def LE_DEBUG_BAD_FONT
+ * @internal
+ */
 #if LE_ASSERT_BAD_FONT
 #include <stdio.h>
 #define LE_DEBUG_BAD_FONT(x) fprintf(stderr,"%s:%d: BAD FONT: %s\n", __FILE__, __LINE__, (x));
@@ -284,7 +292,8 @@ typedef struct LEPoint LEPoint;
 #endif
 
 /**
- * Max value representable by a uintptr 
+ * \def LE_UINTPTR_MAX
+ * Max value representable by a uintptr
  */
 
 #ifndef UINT32_MAX
@@ -302,7 +311,7 @@ typedef struct LEPoint LEPoint;
 /**
  * Range check for overflow
  */
-#define LE_RANGE_CHECK(type, count, ptrfn) (( (LE_UINTPTR_MAX / sizeof(type)) < count ) ? NULL : (ptrfn))
+#define LE_RANGE_CHECK(type, count, ptrfn) (( (LE_UINTPTR_MAX / sizeof(type)) < (size_t)count ) ? NULL : (ptrfn))
 /**
  * A convenience macro to get the length of an array.
  *

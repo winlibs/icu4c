@@ -3,8 +3,9 @@
 
 <html lang="en-US" xmlns="http://www.w3.org/1999/xhtml" xml:lang="en-US">
   <head>
-    <title>ReadMe for ICU 51.2</title>
-    <meta name="COPYRIGHT" content="Copyright (c) 1997-2013 IBM Corporation and others. All Rights Reserved." />
+    <title>ReadMe for ICU 53.1</title>
+    <meta name="COPYRIGHT" content=
+    "Copyright (c) 1997-2014 IBM Corporation and others. All Rights Reserved." />
     <meta name="KEYWORDS" content=
     "ICU; International Components for Unicode; ICU4C; what's new; readme; read me; introduction; downloads; downloading; building; installation;" />
     <meta name="DESCRIPTION" content=
@@ -14,24 +15,24 @@
   </head>
 
   <body class="draft">
-    <h1>International Components for Unicode<br />
-     <abbr title="International Components for Unicode">ICU</abbr> 51.2 ReadMe</h1>
+    <h1>International Components for Unicode<br/>
+     <abbr title="International Components for Unicode">ICU</abbr> 53.1 ReadMe</h1>
 
-    <!--<p><b>Note:</b> This is a development milestone release of ICU4C 52.
-    This milestone is intended for those wishing to get an early look at ICU 52 new features and API changes.
-    It is not recommended for production use.</p>-->
-    <!--<p><b>Note:</b> This is a release candidate version of ICU4C 52.
-    It is not recommended for production use.</p>-->
-    
-    <p><b>Note:</b>     
-      ICU 51.2 is a maintenance release of ICU and includes bug fixes. No new APIs are introduced.
-    </p>
+    <!--
+    <p><b>Note:</b> This is a development milestone release of ICU4C 53
+    This milestone is intended for those wishing to get an early look at ICU 53 new features and API changes.
+    It is not recommended for production use.</p>
+    -->
+    <!--
+    <p><b>Note:</b> This is a release candidate version of ICU4C 53.
+    It is not recommended for production use.</p>
+    -->
 
-    <p>Last updated: 2013-May-20<br />
-     Copyright &copy; 1997-2013 International Business Machines Corporation and
+    <p>Last updated: 2014-Mar-31<br />
+     Copyright &copy; 1997-2014 International Business Machines Corporation and
     others. All Rights Reserved.</p>
     <!-- Remember that there is a copyright at the end too -->
-    <hr />
+    <hr/>
 
     <h2 class="TOC">Table of Contents</h2>
 
@@ -216,57 +217,45 @@
     <h2><a name="News" href="#News" id="News">What is new in this
     release?</a></h2>
 
-    <p>ICU 51.2 is a maintenance release of ICU and includes bug fixes. No new APIs are introduced.</p>
-
     <p>To see which APIs are new or changed in this release, view the <a href="APIChangeReport.html">ICU4C API Change Report</a>. </p>
 
+    <h3></h3><!-- for a horizotal rule matching those at the beginning of each h3 -->
     <p>The following list concentrates on <em>changes that affect existing
     applications migrating from previous ICU releases</em>.
     For more news about this release, see the
-    <!--
-    <a href="http://site.icu-project.org/download/">ICU download page</a>.
-    -->
-    <a href="http://site.icu-project.org/download/milestone">ICU milestone download page</a>.
+    <a href="http://site.icu-project.org/download/53">ICU download page</a>.
+    <!-- <a href="http://site.icu-project.org/download/milestone">ICU milestone download page</a>. -->
     </p>
 
-    <h3>C++ BasicTimeZone subclassing-API breaking changes</h3>
-    <p>We have made make some changes to the C++ BasicTimeZone(basictz.h) for ICU 51
-    that will make it easier to use some time zone support features found in BasicTimeZone
-    (basictz.h), but the changes are incompatible for subclasses. If there are subclasses,
-    they will have to be modified as well.</p>
+    <!-- ICU 53 items -->
+    <h3>ICU4C now requires C99</h3>
+    <p>ICU4C must be built with compilers (or compiler options) that support C99 (ISO/IEC 9899:1999).</p>
 
-    <p>BasicTimeZone is a subclass of TimeZone and providing some enhanced features, such as
-    getNextTransition and getPreviousTransition. The class is used as the base class of all
-    of ICU's time zone implementation classes. User Classes directly extending TimeZone and
-    consumers of ICU TimeZone implementation classes are not affected by the changes.</p>
+    <h3>Collation code re-implemented</h3>
+    <ul>
+      <li>New, incompatible data format of the binary collation data in
+        coll/*.res and coll/ucadata.icu data files.
+        coll/invuca.icu has been removed.</li>
+      <li>Data loading will not fall back to building from rules any more
+        when the binary data is missing or does not match the current implementation.
+        (This removes the dependency from the "runtime" code on the builder.)</li>
+      <li>Rule syntax and semantics tightened and improved, matching
+        <a href="http://unicode.org/repos/cldr/trunk/specs/ldml/tr35-collation.html#Rules">LDML 25 Collation Rule Syntax</a>
+        (TODO: update link for released LDML 25)
+        <ul>
+          <li>In particular, rule chains now must start with a reset.</li>
+        </ul>
+      </li>
+      <li>Setting of variableTop deprecated, and not supported in rule syntax any more
+        <ul>
+          <li>Replaced by the new maxVariable setting; see
+            <a href="http://unicode.org/repos/cldr/trunk/specs/ldml/tr35-collation.html#Collation_Settings">LDML 25 Collation Settings</a>
+            (TODO: update link for released LDML 25)</li>
+        </ul>
+      </li>
+    </ul>
 
-    <p>For details see the email "ICU4C C++ BasicTimeZone subclassing-API breaking changes"
-    sent on 2013-Feb-5 to the icu-support
-    <a href="http://site.icu-project.org/contacts">mailing lists</a>,
-    and <a href="http://bugs.icu-project.org/trac/ticket/9648">ICU ticket #9648</a>.</p>
-
-    <h3>Date format pattern "V"</h3>
-    <p>The date format pattern "V" was introduced in ICU 3.8 (inherited from CLDR 1.5) as
-    a variation of pattern "z" to support time zone abbreviation format such as "PST".
-    The pattern "z" prints out a time zone abbreviation only when it is commonly used for a locale.
-    The pattern "V" was slightly different from pattern "z" and the pattern designates
-    a time zone abbreviation even it is not commonly used for a locale. For example, time
-    zone abbreviation "AEST" for Australian Eastern Standard Time might not be well recognized
-    by people in the United States. For the zone, pattern "z" does not use "AEST" (instead, use
-    UTC offset format "GMT+10:00, as the fallback) , while pattern "V" used to print out "AEST".
-    In CLDR 21, the data used for checking commonly used or not was completely removed (CLDR
-    ticket <a href="http://unicode.org/cldr/trac/ticket/4052">#4052</a>), so the difference
-    between pattern "z" and "V" is no longer available since ICU 49 (based on CLDR 21 specification).</p>
-
-    <p>In CLDR 23, the CLDR technical committee decided to reuse the semantically deprecated
-    pattern "V" for a different purpose. With the new specification, the date format pattern
-    "V" is used for short time zone IDs, such as "uslax" for zone America/Los_Angeles. ICU 51
-    implements the new specification. So existing ICU users currently using custom date format
-    patterns with pattern "V" are suggested to change them to pattern "z".</p>
-
-   <p>Note that the existing pattern "VVVV" for a time zone's generic location name is not
-   affected by the new specification and the pattern "VVVV" continues to work as same as
-   previous ICU releases.</p>
+    <!-- end ICU 53 items -->
 
     <h2><a name="Download" href="#Download" id="Download">How To Download the
     Source Code</a></h2>
@@ -550,7 +539,8 @@
     "RecBuild">Recommended Build Options</a></h3>
 
     <p>Depending on the platform and the type of installation,
-    we recommend a small number of modifications and build options.</p>
+    we recommend a small number of modifications and build options.
+    Note that C99 compatibility is now required.</p>
     <ul>
       <li><b>Namespace:</b> By default, unicode/uversion.h has
         "using namespace icu;" which defeats much of the purpose of the namespace.
@@ -739,10 +729,10 @@
     <ul>
       <li>Microsoft Windows</li>
 
-      <li>Microsoft Visual C++</li>
-
-      <li><a href="#HowToBuildCygwin">Cygwin</a> is required when other versions
-      of Microsoft Visual C++ and other compilers are used to build ICU.</li>
+      <li>Microsoft Visual C++ (see the ICU download page for the currently compatible version)</li>
+      
+      <li>NOTE: <a href="#HowToBuildCygwin">Cygwin</a> is required if using a version of MSVC other than the one
+      compatible with the supplied project files or if other compilers are used to build ICU. (e.g. GCC)</li>
     </ul>
 
     <p>The steps are:</p>
@@ -1130,6 +1120,12 @@
 <pre><samp>export _CXX_PSYSIX="CEE.SCEELIB(C128N)":"CBC.SCLBSID(IOSTREAM,COMPLEX)"</samp></pre>
       </li>
       
+      <li>When building ICU data, the heap size may need to be increased with the following
+      environment variable:
+
+<pre><samp>export _CEE_RUNOPTS="HEAPPOOLS(ON),HEAP(4M,1M,ANY,FREE,0K,4080)"</samp></pre>
+      </li>
+      
 
       <li>The rest of the instructions for building and testing ICU on z/OS with
       UNIX System Services are the same as the <a href="#HowToBuildUNIX">How To
@@ -1240,47 +1236,59 @@ Data set name type  : PDS</samp>
 
     <ol>
       <li>
+        Copy the ICU source .tgz to the IBM i environment, as binary.
+        Also, copy the <a href='as_is/os400/unpax-icu.sh'>unpax-icu.sh</a> script into the same directory, as a text file.
+      </li>
+
+      <li>
         Create target library. This library will be the target for the
         resulting modules, programs and service programs. You will specify this
         library on the OUTPUTDIR environment variable.
 <pre>
 <samp>CRTLIB LIB(<i>libraryname</i>)
-ADDENVVAR ENVVAR(OUTPUTDIR) VALUE('<i>libraryname</i>') REPLACE(*YES)   </samp>
-</pre>
+ADDENVVAR ENVVAR(OUTPUTDIR) VALUE('<i>libraryname</i>') REPLACE(*YES)   </samp></pre>
       </li>
 
       <li>
       Set up the following environment variables and job characteristics in your build process
 <pre>
 <samp>ADDENVVAR ENVVAR(MAKE) VALUE('gmake') REPLACE(*YES)
-CHGJOB CCSID(37)</samp>
-</pre></li>
+CHGJOB CCSID(37)</samp></pre></li>
 
-      <li>Run <tt>'QSH'</tt></li>
-      
-      <li>Run: <br /><tt>export PATH=/QIBM/ProdData/DeveloperTools/qsh/bin:$PATH:/QOpenSys/usr/bin</tt>
+      <li>Fire up the QSH <i>(all subsequent commands are run inside the qsh session.)</i>
+        <pre><samp>qsh</samp></pre>
       </li>
 
-      <li>Run <b><tt>gzip -d</tt></b> on the ICU source code compressed tar archive
-      (icu-<i>X</i>.<i>Y</i>.tgz).</li>
+      <li>Set up the PATH: <pre><samp>export PATH=/QIBM/ProdData/DeveloperTools/qsh/bin:$PATH:/QOpenSys/usr/bin</samp></pre>
+      </li>
 
-      <li>Run <a href='as_is/os400/unpax-icu.sh'>unpax-icu.sh</a> on the tar file generated from the previous step.</li>
+      <li>Unpack the ICU source code archive:
+        <pre><samp>gzip -d icu-<i>X</i>.<i>Y</i>.tgz</samp></pre>
+          </li>
 
-      <li>Change your current directory to icu/as_is/os400.</li>
-      <li>Run <tt>qsh bldiculd.sh</tt> to build the program ICULD which ICU will use for linkage.</li>
+      <li>Run unpax-icu.sh on the tar file generated from the previous step.
+        <pre><samp>unpax-icu.sh icu.tar</samp></pre></li>
 
-      <li>Change your current directory to icu/source.</li>
+      <li>Build the program ICULD which ICU will use for linkage.
+        <pre><samp>cd icu/as_is/os400
+qsh bldiculd.sh
+cd ../../..</samp></pre>
+        </li>
 
-      <li>Run <tt>'./runConfigureICU IBMi'</tt>  (See <a href="#HowToConfigureICU">configuration
-      note</a> for details). Note that --with-data-packaging=archive and setting the --prefix are recommended, building in default (dll) mode is currently not supported.</li>
+      <li>Change into the 'source' directory, and configure ICU.  (See <a href="#HowToConfigureICU">configuration
+      note</a> for details). Note that --with-data-packaging=archive and setting the --prefix are recommended, building in default (dll) mode is currently not supported.
+        <pre><samp>cd icu/source
+./runConfigureICU IBMi --prefix=<i>/path/to/somewhere</i> --with-data-packaging=archive</samp></pre>
+</li>
 
-      <li>Run <tt>'gmake'</tt> to build ICU. (Do not use the -j option)</li>
+      <li>Build ICU. <i>(Note: Do not use the -j option)</i> <pre><samp>gmake</samp></pre></li>
 
-      <li>Run <tt>'gmake check QIBM_MULTI_THREADED=Y'</tt> to build and run the tests.
-      You can look at the <a href=
+      <li>Test ICU. <pre><samp>gmake check</samp></pre>  
+        (The <tt> QIBM_MULTI_THREADED=Y</tt> flag will be automatically applied to intltest -
+          you can look at the <a href=
       "http://publib.boulder.ibm.com/infocenter/iseries/v5r3/index.jsp?topic=/apis/concept4.htm">
       iSeries Information Center</a> for more details regarding the running of multiple threads
-      on IBM i.</li>
+      on IBM i.)</li>
     </ol>
 
       <!-- cross -->
@@ -1756,7 +1764,7 @@ gnumake</pre>
     </ul>
     <hr />
 
-    <p>Copyright &copy; 1997-2013 International Business Machines Corporation and
+    <p>Copyright &copy; 1997-2014 International Business Machines Corporation and
     others. All Rights Reserved.<br />
      IBM Globalization Center of Competency - San Jos&eacute;<br />
      4400 North First Street<br />
@@ -1764,4 +1772,3 @@ gnumake</pre>
      USA</p>
   </body>
 </html>
-

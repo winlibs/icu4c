@@ -1,13 +1,13 @@
 ﻿// ***************************************************************************
 // *
-// * Copyright (C) 2013 International Business Machines
+// * Copyright (C) 2014 International Business Machines
 // * Corporation and others. All Rights Reserved.
 // * Tool: org.unicode.cldr.icu.NewLdml2IcuConverter
 // * Source File: <path>/common/main/ms.xml
 // *
 // ***************************************************************************
 /**
- *  ICU <specials> source: <path>/xml/main/ms.xml
+ * ICU <specials> source: <path>/common/main/ms.xml
  */
 ms{
     Keys{
@@ -32,32 +32,50 @@ ms{
         ab{"Abkhazia"}
         ach{"Akoli"}
         af{"Afrikaans"}
+        agq{"Aghem"}
         ak{"Akan"}
         am{"Amharic"}
         ar{"Arab"}
+        ar_001{"Arab Standard Moden"}
         as{"Assam"}
+        asa{"Asu"}
         ay{"Aymara"}
         az{"Azerbaijan"}
+        bax{"Bamun"}
+        bbj{"Ghomala"}
         be{"Belarus"}
         bem{"Bemba"}
+        bez{"Bena"}
+        bfd{"Bafut"}
         bg{"Bulgaria"}
-        bh{"Bihari"}
+        bkm{"Kom"}
         bn{"Benggala"}
         bo{"Tibet"}
         br{"Breton"}
+        brx{"Bodo"}
         bs{"Bosnia"}
+        bss{"Akoose"}
+        bum{"Bulu"}
+        byv{"Medumba"}
         ca{"Catalonia"}
+        cay{"Cayuga"}
+        cgg{"Chiga"}
         chr{"Cherokee"}
         ckb{"Kurdi Sorani"}
         co{"Corsica"}
         cs{"Czech"}
         cy{"Wales"}
         da{"Denmark"}
+        dav{"Taita"}
         de{"Jerman"}
         de_AT{"Jerman Austria"}
         de_CH{"Jerman Halus Switzerland"}
+        dje{"Zarma"}
         dv{"Divehi"}
+        dyo{"Jola-Fonyi"}
         dz{"Dzongkha"}
+        dzg{"Dazaga"}
+        ebu{"Embu"}
         ee{"Ewe"}
         efi{"Efik"}
         el{"Greek"}
@@ -65,11 +83,12 @@ ms{
         en_AU{"Inggeris Australia"}
         en_CA{"Inggeris Kanada"}
         en_GB{"Inggeris British"}
-        en_US{"Bahasa Inggeris AS"}
+        en_US{"Inggeris AS"}
         eo{"Esperanto"}
         es{"Sepanyol"}
         es_419{"Sepanyol Amerika Latin"}
         es_ES{"Sepanyol Eropah"}
+        es_MX{"Sepanyol Mexico"}
         et{"Estonia"}
         eu{"Basque"}
         fa{"Parsi"}
@@ -88,6 +107,7 @@ ms{
         gn{"Guarani"}
         gsw{"Jerman Switzerland"}
         gu{"Gujerat"}
+        guz{"Gusii"}
         ha{"Hausa"}
         haw{"Hawaii"}
         he{"Ibrani"}
@@ -97,32 +117,53 @@ ms{
         hu{"Hungary"}
         hy{"Armenia"}
         ia{"Interlingua"}
+        ibb{"Ibibio"}
         id{"Indonesia"}
+        ie{"Interlingue"}
         ig{"Igbo"}
         is{"Iceland"}
         it{"Itali"}
         ja{"Jepun"}
+        jgo{"Ngomba"}
+        jmc{"Machame"}
         jv{"Jawa"}
         ka{"Georgia"}
+        kbl{"Kanembu"}
+        kde{"Makonde"}
+        kea{"Kabuverdianu"}
         kg{"Kongo"}
+        khq{"Koyra Chiini"}
         kk{"Kazakhstan"}
+        kkj{"Kako"}
+        kln{"Kalenjin"}
         km{"Khmer"}
         kn{"Kannada"}
         ko{"Korea"}
         ks{"Kashmir"}
+        ksb{"Shambala"}
+        ksf{"Bafia"}
+        ksh{"Colognian"}
         ku{"Kurdish"}
         ky{"Kirghiz"}
         la{"Latin"}
+        lag{"Langi"}
         lb{"Luxembourg"}
         lg{"Ganda"}
+        lkt{"Lakota"}
         ln{"Lingala"}
         lo{"Laos"}
         loz{"Lozi"}
         lt{"Lithuania"}
         lua{"Luba-Lulua"}
+        luy{"Luyia"}
         lv{"Latvia"}
+        maf{"Mafa"}
+        mde{"Maba"}
+        mer{"Meru"}
         mfe{"Morisyen"}
         mg{"Malagasy"}
+        mgh{"Makhuwa-Meetto"}
+        mgo{"Meta'"}
         mi{"Maori"}
         mk{"Macedonia"}
         ml{"Malayalam"}
@@ -130,14 +171,20 @@ ms{
         mr{"Marathi"}
         ms{"Bahasa Melayu"}
         mt{"Malta"}
+        mua{"Mundang"}
         my{"Burma"}
+        mye{"Myene"}
+        naq{"Nama"}
         nb{"Bokmål Norway"}
         nd{"Ndebele Utara"}
         ne{"Nepal"}
         nl{"Belanda"}
         nl_BE{"Flemish"}
+        nmg{"Kwasio"}
         nn{"Nynorsk Norway"}
+        no{"Norway"}
         nso{"Sotho Utara"}
+        nus{"Nuer"}
         ny{"Nyanja"}
         nyn{"Nyankole"}
         oc{"Occitania"}
@@ -154,13 +201,23 @@ ms{
         rm{"Romansh"}
         rn{"Rundi"}
         ro{"Romania"}
+        rof{"Rombo"}
         ru{"Rusia"}
         rw{"Kinyarwanda"}
+        rwk{"Rwa"}
         sa{"Sanskrit"}
+        saq{"Samburu"}
+        sba{"Ngambay"}
+        sbp{"Sangu"}
         sd{"Sindhi"}
         se{"Sami Utara"}
+        see{"Seneca"}
+        seh{"Sena"}
+        ses{"Koyraboro Senni"}
         sg{"Sango"}
         sh{"SerboCroatia"}
+        shi{"Tachelhit"}
+        shu{"Chadian Arab"}
         si{"Sinhala"}
         sk{"Slovak"}
         sl{"Slovenia"}
@@ -170,12 +227,15 @@ ms{
         sq{"Albania"}
         sr{"Serbia"}
         ss{"Swati"}
+        ssy{"Saho"}
         st{"Sotho Selatan"}
         su{"Sunda"}
         sv{"Sweden"}
         sw{"Swahili"}
+        swc{"Congo Swahili"}
         ta{"Tamil"}
         te{"Telugu"}
+        teo{"Teso"}
         tet{"Tetum"}
         tg{"Tajik"}
         th{"Thai"}
@@ -186,10 +246,14 @@ ms{
         to{"Tonga"}
         tpi{"Tok Pisin"}
         tr{"Turki"}
+        trv{"Taroko"}
         ts{"Tsonga"}
         tt{"Tatar"}
         tum{"Tumbuka"}
+        tw{"Twi"}
+        twq{"Tasawaq"}
         ty{"Tahiti"}
+        tzm{"Tamazight Atlas Tengah"}
         ug{"Uighur"}
         uk{"Ukraine"}
         und{"Bahasa Tidak Diketahui"}
@@ -197,18 +261,27 @@ ms{
         uz{"Uzbekistan"}
         ve{"Venda"}
         vi{"Vietnam"}
+        vun{"Vunjo"}
+        wae{"Walser"}
         wo{"Wolof"}
         xh{"Xhosa"}
+        xog{"Soga"}
+        yav{"Yangben"}
+        ybb{"Yemba"}
         yi{"Yiddish"}
         yo{"Yoruba"}
+        zgh{"Tamazight Maghribi Standard"}
         zh{"Cina"}
         zh_Hans{"Cina Ringkas"}
         zh_Hant{"Cina Tradisional"}
         zu{"Zulu"}
-        zxx{"Tidak kandungan linguistik"}
+        zxx{"Tiada kandungan linguistik"}
+        zza{"Zaza"}
     }
     LanguagesShort{
         az{"Azeri"}
+        en_GB{"Inggeris U.K."}
+        en_US{"Inggeris A.S."}
     }
     Scripts{
         Arab{"Arab"}
@@ -271,6 +344,42 @@ ms{
             persian{"Kalendar Parsi"}
             roc{"Kalendar Minguo"}
         }
+        colAlternate{
+            non-ignorable{"Isih Simbol"}
+            shifted{"Isih Mengabaikan Simbol"}
+        }
+        colBackwards{
+            no{"Isih Aksen Secara Biasa"}
+            yes{"Isih Aksen Terbalik"}
+        }
+        colCaseFirst{
+            lower{"Isih Huruf Kecil Dahulu"}
+            no{"Isih Urutan Atur Biasa"}
+            upper{"Isih Huruf Besar Dahulu"}
+        }
+        colCaseLevel{
+            no{"Isih Tidak Sensitif Atur"}
+            yes{"Isih Sensitif Atur"}
+        }
+        colHiraganaQuaternary{
+            no{"Isih Kana Berasingan"}
+            yes{"Isih Kana Secara Berbeza"}
+        }
+        colNormalization{
+            no{"Isih Tanpa Penormalan"}
+            yes{"Isih Unikod Ternormal"}
+        }
+        colNumeric{
+            no{"Isih Digit Secara Berasingan"}
+            yes{"Isih Digit Mengikut Nombor"}
+        }
+        colStrength{
+            identical{"Isih Semua"}
+            primary{"Isih Huruf Asas Sahaja"}
+            quaternary{"Isih Aksen/Atur/Lebar/Kana"}
+            secondary{"Isih Aksen"}
+            tertiary{"Isih Aksen/Atur/Lebar"}
+        }
         collation{
             big5han{"Aturan Isih Cina Tradisional - Big5"}
             dictionary{"Aturan Isih Kamus"}
@@ -282,6 +391,7 @@ ms{
             reformed{"Aturan Isih Pembaharuan"}
             search{"Carian Tujuan Umum"}
             searchjl{"Cari Mengikut Konsonan Awal Hangul"}
+            standard{"Urutan Isihan Standard"}
             stroke{"Aturan Isih Coretan"}
             traditional{"Aturan Isih Tradisional"}
             unihan{"Aturan Isih Coretan Radikal"}
@@ -329,15 +439,15 @@ ms{
             vaii{"Digit Vai"}
         }
     }
-    Version{"2.0.86.71"}
+    Version{"2.0.97.91"}
     codePatterns{
-        language{"{0}"}
-        script{"{0}"}
-        territory{"{0}"}
+        language{"Bahasa: {0}"}
+        script{"Skrip: {0}"}
+        territory{"Kawasan: {0}"}
     }
     localeDisplayPattern{
         keyTypePattern{"{0}: {1}"}
         pattern{"{0} ({1})"}
-        separator{","}
+        separator{"{0}, {1}"}
     }
 }
