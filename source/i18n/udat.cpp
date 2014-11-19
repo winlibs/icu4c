@@ -310,6 +310,26 @@ udat_setLenient(    UDateFormat*    fmt,
     ((DateFormat*)fmt)->setLenient(isLenient);
 }
 
+U_DRAFT UBool U_EXPORT2
+udat_getBooleanAttribute(const UDateFormat* fmt, 
+                         UDateFormatBooleanAttribute attr, 
+                         UErrorCode* status)
+{
+    if(U_FAILURE(*status)) return FALSE;
+    return ((DateFormat*)fmt)->getBooleanAttribute(attr, *status);
+    //return FALSE;
+}
+
+U_DRAFT void U_EXPORT2
+udat_setBooleanAttribute(UDateFormat *fmt, 
+                         UDateFormatBooleanAttribute attr, 
+                         UBool newValue, 
+                         UErrorCode* status)
+{
+    if(U_FAILURE(*status)) return;
+    ((DateFormat*)fmt)->setBooleanAttribute(attr, newValue, *status);
+}
+
 U_CAPI const UCalendar* U_EXPORT2
 udat_getCalendar(const UDateFormat* fmt)
 {
@@ -323,10 +343,34 @@ udat_setCalendar(UDateFormat*    fmt,
     ((DateFormat*)fmt)->setCalendar(*((Calendar*)calendarToSet));
 }
 
+U_DRAFT const UNumberFormat* U_EXPORT2 
+udat_getNumberFormatForField(const UDateFormat* fmt, UChar field)
+{
+    UErrorCode status = U_ZERO_ERROR;
+    verifyIsSimpleDateFormat(fmt, &status);
+    if (U_FAILURE(status)) return (const UNumberFormat*) ((DateFormat*)fmt)->getNumberFormat();
+    return (const UNumberFormat*) ((SimpleDateFormat*)fmt)->getNumberFormatForField(field);
+}
+
 U_CAPI const UNumberFormat* U_EXPORT2
 udat_getNumberFormat(const UDateFormat* fmt)
 {
     return (const UNumberFormat*) ((DateFormat*)fmt)->getNumberFormat();
+}
+
+U_DRAFT void U_EXPORT2 
+udat_adoptNumberFormatForFields(           UDateFormat*    fmt,
+                                    const  UChar*          fields,
+                                           UNumberFormat*  numberFormatToSet,
+                                           UErrorCode*     status)
+{
+    verifyIsSimpleDateFormat(fmt, status);
+    if (U_FAILURE(*status)) return;
+    
+    if (fields!=NULL) {
+        UnicodeString overrideFields(fields);
+        ((SimpleDateFormat*)fmt)->adoptNumberFormat(overrideFields, (NumberFormat*)numberFormatToSet, *status);
+    }
 }
 
 U_CAPI void U_EXPORT2
@@ -334,6 +378,13 @@ udat_setNumberFormat(UDateFormat*    fmt,
                      const   UNumberFormat*  numberFormatToSet)
 {
     ((DateFormat*)fmt)->setNumberFormat(*((NumberFormat*)numberFormatToSet));
+}
+
+U_DRAFT void U_EXPORT2
+udat_adoptNumberFormat(      UDateFormat*    fmt,
+                             UNumberFormat*  numberFormatToAdopt)
+{
+    ((DateFormat*)fmt)->adoptNumberFormat((NumberFormat*)numberFormatToAdopt);
 }
 
 U_CAPI const char* U_EXPORT2
@@ -541,6 +592,30 @@ udat_getSymbols(const   UDateFormat     *fmt,
         res = syms->getQuarters(count, DateFormatSymbols::STANDALONE, DateFormatSymbols::ABBREVIATED);
         break;
 
+    case UDAT_CYCLIC_YEARS_WIDE:
+        res = syms->getYearNames(count, DateFormatSymbols::FORMAT, DateFormatSymbols::WIDE);
+        break;
+
+    case UDAT_CYCLIC_YEARS_ABBREVIATED:
+        res = syms->getYearNames(count, DateFormatSymbols::FORMAT, DateFormatSymbols::ABBREVIATED);
+        break;
+
+    case UDAT_CYCLIC_YEARS_NARROW:
+        res = syms->getYearNames(count, DateFormatSymbols::FORMAT, DateFormatSymbols::NARROW);
+        break;
+
+    case UDAT_ZODIAC_NAMES_WIDE:
+        res = syms->getZodiacNames(count, DateFormatSymbols::FORMAT, DateFormatSymbols::WIDE);
+        break;
+
+    case UDAT_ZODIAC_NAMES_ABBREVIATED:
+        res = syms->getZodiacNames(count, DateFormatSymbols::FORMAT, DateFormatSymbols::ABBREVIATED);
+        break;
+
+    case UDAT_ZODIAC_NAMES_NARROW:
+        res = syms->getZodiacNames(count, DateFormatSymbols::FORMAT, DateFormatSymbols::NARROW);
+        break;
+
     }
 
     if(index < count) {
@@ -653,6 +728,30 @@ udat_countSymbols(    const    UDateFormat                *fmt,
 
     case UDAT_STANDALONE_SHORT_QUARTERS:
         syms->getQuarters(count, DateFormatSymbols::STANDALONE, DateFormatSymbols::ABBREVIATED);
+        break;
+
+    case UDAT_CYCLIC_YEARS_WIDE:
+        syms->getYearNames(count, DateFormatSymbols::FORMAT, DateFormatSymbols::WIDE);
+        break;
+
+    case UDAT_CYCLIC_YEARS_ABBREVIATED:
+        syms->getYearNames(count, DateFormatSymbols::FORMAT, DateFormatSymbols::ABBREVIATED);
+        break;
+
+    case UDAT_CYCLIC_YEARS_NARROW:
+        syms->getYearNames(count, DateFormatSymbols::FORMAT, DateFormatSymbols::NARROW);
+        break;
+
+    case UDAT_ZODIAC_NAMES_WIDE:
+        syms->getZodiacNames(count, DateFormatSymbols::FORMAT, DateFormatSymbols::WIDE);
+        break;
+
+    case UDAT_ZODIAC_NAMES_ABBREVIATED:
+        syms->getZodiacNames(count, DateFormatSymbols::FORMAT, DateFormatSymbols::ABBREVIATED);
+        break;
+
+    case UDAT_ZODIAC_NAMES_NARROW:
+        syms->getZodiacNames(count, DateFormatSymbols::FORMAT, DateFormatSymbols::NARROW);
         break;
 
     }
@@ -844,6 +943,20 @@ public:
     }
 
     static void
+        setShortYearNames(DateFormatSymbols *syms, int32_t index,
+        const UChar *value, int32_t valueLength, UErrorCode &errorCode)
+    {
+        setSymbol(syms->fShortYearNames, syms->fShortYearNamesCount, index, value, valueLength, errorCode);
+    }
+
+    static void
+        setShortZodiacNames(DateFormatSymbols *syms, int32_t index,
+        const UChar *value, int32_t valueLength, UErrorCode &errorCode)
+    {
+        setSymbol(syms->fShortZodiacNames, syms->fShortZodiacNamesCount, index, value, valueLength, errorCode);
+    }
+
+    static void
         setAmPm(DateFormatSymbols *syms, int32_t index,
         const UChar *value, int32_t valueLength, UErrorCode &errorCode)
     {
@@ -952,6 +1065,14 @@ udat_setSymbols(    UDateFormat             *format,
 
     case UDAT_STANDALONE_SHORT_QUARTERS:
         DateFormatSymbolsSingleSetter::setStandaloneShortQuarter(syms, index, value, valueLength, *status);
+        break;
+
+    case UDAT_CYCLIC_YEARS_ABBREVIATED:
+        DateFormatSymbolsSingleSetter::setShortYearNames(syms, index, value, valueLength, *status);
+        break;
+
+    case UDAT_ZODIAC_NAMES_ABBREVIATED:
+        DateFormatSymbolsSingleSetter::setShortZodiacNames(syms, index, value, valueLength, *status);
         break;
 
     case UDAT_AM_PMS:

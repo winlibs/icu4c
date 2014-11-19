@@ -6,7 +6,7 @@
 */
 
 /**
- * \file 
+ * \file
  * \brief C++ API: The RuleBasedCollator class implements the Collator abstract base class.
  */
 
@@ -71,6 +71,7 @@
 
 U_NAMESPACE_BEGIN
 
+struct CollationCacheEntry;
 struct CollationData;
 struct CollationSettings;
 struct CollationTailoring;
@@ -115,7 +116,6 @@ public:
      * description for more details on the collation rule syntax.
      * @param rules the collation rules to build the collation table from.
      * @param status reporting a success or an error.
-     * @see Locale
      * @stable ICU 2.0
      */
     RuleBasedCollator(const UnicodeString& rules, UErrorCode& status);
@@ -125,9 +125,8 @@ public:
      * collation table out of them. Please see RuleBasedCollator class
      * description for more details on the collation rule syntax.
      * @param rules the collation rules to build the collation table from.
-     * @param collationStrength default strength for comparison
+     * @param collationStrength strength for comparison
      * @param status reporting a success or an error.
-     * @see Locale
      * @stable ICU 2.0
      */
     RuleBasedCollator(const UnicodeString& rules,
@@ -141,7 +140,6 @@ public:
      * @param rules the collation rules to build the collation table from.
      * @param decompositionMode the normalisation mode
      * @param status reporting a success or an error.
-     * @see Locale
      * @stable ICU 2.0
      */
     RuleBasedCollator(const UnicodeString& rules,
@@ -153,10 +151,9 @@ public:
      * collation table out of them. Please see RuleBasedCollator class
      * description for more details on the collation rule syntax.
      * @param rules the collation rules to build the collation table from.
-     * @param collationStrength default strength for comparison
+     * @param collationStrength strength for comparison
      * @param decompositionMode the normalisation mode
      * @param status reporting a success or an error.
-     * @see Locale
      * @stable ICU 2.0
      */
     RuleBasedCollator(const UnicodeString& rules,
@@ -177,7 +174,6 @@ public:
     /**
      * Copy constructor.
      * @param other the RuleBasedCollator object to be copied
-     * @see Locale
      * @stable ICU 2.0
      */
     RuleBasedCollator(const RuleBasedCollator& other);
@@ -187,14 +183,14 @@ public:
     *  cloneBinary. Binary image used in instantiation of the 
     *  collator remains owned by the user and should stay around for 
     *  the lifetime of the collator. The API also takes a base collator
-    *  which usually should be the root collator.
+    *  which must be the root collator.
     *  @param bin binary image owned by the user and required through the
     *             lifetime of the collator
     *  @param length size of the image. If negative, the API will try to
     *                figure out the length of the image
-    *  @param base fallback collator, usually root. The base is required to be
-    *              present through the lifetime of the collator. Currently 
-    *              it cannot be NULL.
+    *  @param base Base collator, for lookup of untailored characters.
+    *              Must be the root collator, must not be NULL.
+    *              The base is required to be present through the lifetime of the collator.
     *  @param status for catching errors
     *  @return newly created collator
     *  @see cloneBinary
@@ -347,34 +343,38 @@ public:
                                          UErrorCode &status) const;
 
     /**
-    * Transforms a specified region of the string into a series of characters
-    * that can be compared with CollationKey.compare. Use a CollationKey when
-    * you need to do repeated comparisions on the same string. For a single
-    * comparison the compare method will be faster.
-    * @param source the source string.
-    * @param key the transformed key of the source string.
-    * @param status the error code status.
-    * @return the transformed key.
-    * @see CollationKey
-    * @stable ICU 2.0
-    */
+     * Transforms the string into a series of characters
+     * that can be compared with CollationKey.compare().
+     *
+     * Note that sort keys are often less efficient than simply doing comparison.  
+     * For more details, see the ICU User Guide.
+     *
+     * @param source the source string.
+     * @param key the transformed key of the source string.
+     * @param status the error code status.
+     * @return the transformed key.
+     * @see CollationKey
+     * @stable ICU 2.0
+     */
     virtual CollationKey& getCollationKey(const UnicodeString& source,
                                           CollationKey& key,
                                           UErrorCode& status) const;
 
     /**
-    * Transforms a specified region of the string into a series of characters
-    * that can be compared with CollationKey.compare. Use a CollationKey when
-    * you need to do repeated comparisions on the same string. For a single
-    * comparison the compare method will be faster.
-    * @param source the source string.
-    * @param sourceLength the length of the source string.
-    * @param key the transformed key of the source string.
-    * @param status the error code status.
-    * @return the transformed key.
-    * @see CollationKey
-    * @stable ICU 2.0
-    */
+     * Transforms a specified region of the string into a series of characters
+     * that can be compared with CollationKey.compare.
+     *
+     * Note that sort keys are often less efficient than simply doing comparison.  
+     * For more details, see the ICU User Guide.
+     *
+     * @param source the source string.
+     * @param sourceLength the length of the source string.
+     * @param key the transformed key of the source string.
+     * @param status the error code status.
+     * @return the transformed key.
+     * @see CollationKey
+     * @stable ICU 2.0
+     */
     virtual CollationKey& getCollationKey(const UChar *source,
                                           int32_t sourceLength,
                                           CollationKey& key,
@@ -613,6 +613,10 @@ public:
 
     /**
      * Get the sort key as an array of bytes from a UnicodeString.
+     *
+     * Note that sort keys are often less efficient than simply doing comparison.  
+     * For more details, see the ICU User Guide.
+     *
      * @param source string to be processed.
      * @param result buffer to store result in. If NULL, number of bytes needed
      *        will be returned.
@@ -626,6 +630,10 @@ public:
 
     /**
      * Get the sort key as an array of bytes from a UChar buffer.
+     *
+     * Note that sort keys are often less efficient than simply doing comparison.  
+     * For more details, see the ICU User Guide.
+     *
      * @param source string to be processed.
      * @param sourceLength length of string to be processed. If -1, the string
      *        is 0 terminated and length will be decided by the function.
@@ -715,13 +723,13 @@ public:
             UCharIterator *iter, uint32_t state[2],
             uint8_t *dest, int32_t count, UErrorCode &errorCode) const;
 
-#ifndef U_HIDE_INTERNAL_API
     /**
      * Only for use in ucol_openRules().
      * @internal
      */
     RuleBasedCollator();
 
+#ifndef U_HIDE_INTERNAL_API
     /**
      * Implements ucol_getLocaleByType().
      * Needed because the lifetime of the locale ID string must match that of the collator.
@@ -794,7 +802,7 @@ private:
     friend class CollationElementIterator;
     friend class Collator;
 
-    RuleBasedCollator(const CollationTailoring *t, const Locale &vl);
+    RuleBasedCollator(const CollationCacheEntry *entry);
 
     /**
      * Enumeration of attributes that are relevant for short definition strings
@@ -806,7 +814,7 @@ private:
         ATTR_LIMIT
     };
 
-    void adoptTailoring(CollationTailoring *t);
+    void adoptTailoring(CollationTailoring *t, UErrorCode &errorCode);
 
     // Both lengths must be <0 or else both must be >=0.
     UCollationResult doCompare(const UChar *left, int32_t leftLength,
@@ -851,7 +859,8 @@ private:
 
     const CollationData *data;
     const CollationSettings *settings;  // reference-counted
-    const CollationTailoring *tailoring;  // reference-counted
+    const CollationTailoring *tailoring;  // alias of cacheEntry->tailoring
+    const CollationCacheEntry *cacheEntry;  // reference-counted
     Locale validLocale;
     uint32_t explicitlySetAttributes;
 

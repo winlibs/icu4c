@@ -850,7 +850,7 @@ typedef enum UDateFormatBooleanAttribute {
     UDAT_PARSE_ALLOW_WHITESPACE = 0,
     /**
      * indicates tolerance of numeric data when String data may be assumed. eg: UDAT_YEAR_NAME_FIELD,
-     * 		UDAT_STANDALONE_MONTH_FIELD, UDAT_DAY_OF_WEEK_FIELD
+     * UDAT_STANDALONE_MONTH_FIELD, UDAT_DAY_OF_WEEK_FIELD
      * @draft ICU 53
      */
     UDAT_PARSE_ALLOW_NUMERIC = 1,
@@ -1084,18 +1084,71 @@ udat_setCalendar(            UDateFormat*    fmt,
 U_STABLE const UNumberFormat* U_EXPORT2 
 udat_getNumberFormat(const UDateFormat* fmt);
 
+#ifndef U_HIDE_DRAFT_API
+/**
+* Get the UNumberFormat for specific field associated with an UDateFormat.
+* For example: 'y' for year and 'M' for month
+* @param fmt The formatter to query.
+* @param field the field to query
+* @return A pointer to the UNumberFormat used by fmt to format field numbers.
+* @see udat_setNumberFormatForField
+* @draft ICU 54
+*/
+U_DRAFT const UNumberFormat* U_EXPORT2 
+udat_getNumberFormatForField(const UDateFormat* fmt, UChar field);
+
+/**
+* Set the UNumberFormat for specific field associated with an UDateFormat.
+* It can be a single field like: "y"(year) or "M"(month)
+* It can be several field combined together: "yM"(year and month)
+* Note: 
+* 1 symbol field is enough for multiple symbol field (so "y" will override "yy", "yyy")
+* If the field is not numeric, then override has no effect (like "MMM" will use abbreviation, not numerical field)
+*
+* @param fields the fields to set
+* @param fmt The formatter to set.
+* @param numberFormatToSet A pointer to the UNumberFormat to be used by fmt to format numbers.
+* @param status error code passed around (memory allocation or invalid fields)
+* @see udat_getNumberFormatForField
+* @draft ICU 54
+*/
+U_DRAFT void U_EXPORT2 
+udat_adoptNumberFormatForFields(  UDateFormat* fmt,
+                            const UChar* fields,
+                                  UNumberFormat*  numberFormatToSet,
+                                  UErrorCode* status);
+#endif  /* U_HIDE_DRAFT_API */
+
 /**
 * Set the UNumberFormat associated with an UDateFormat.
 * A UDateFormat uses a UNumberFormat to format numbers within a date,
 * for example the day number.
+* This method also clears per field NumberFormat instances previously 
+* set by {@see udat_setNumberFormatForField} 
 * @param fmt The formatter to set.
 * @param numberFormatToSet A pointer to the UNumberFormat to be used by fmt to format numbers.
 * @see udat_getNumberFormat
+* @see udat_setNumberFormatForField
 * @stable ICU 2.0
 */
 U_STABLE void U_EXPORT2 
 udat_setNumberFormat(            UDateFormat*    fmt,
                         const   UNumberFormat*  numberFormatToSet);
+
+#ifndef U_HIDE_DRAFT_API
+/**
+* Adopt the UNumberFormat associated with an UDateFormat.
+* A UDateFormat uses a UNumberFormat to format numbers within a date,
+* for example the day number.
+* @param fmt The formatter to set.
+* @param numberFormatToAdopt A pointer to the UNumberFormat to be used by fmt to format numbers.
+* @see udat_getNumberFormat
+* @draft ICU 54
+*/
+U_DRAFT void U_EXPORT2 
+udat_adoptNumberFormat(            UDateFormat*    fmt,
+                                   UNumberFormat*  numberFormatToAdopt);
+#endif  /* U_HIDE_DRAFT_API */
 
 /**
 * Get a locale for which date/time formatting patterns are available.
@@ -1245,6 +1298,43 @@ typedef enum UDateFormatSymbolType {
      * @stable ICU 51
      */
     UDAT_STANDALONE_SHORTER_WEEKDAYS
+#ifndef U_HIDE_DRAFT_API
+    ,
+	/**
+	 * Cyclic year names (only supported for some calendars, and only for FORMAT usage;
+	 * udat_setSymbols not supported for UDAT_CYCLIC_YEARS_WIDE)
+	 * @draft ICU 54
+	 */
+	UDAT_CYCLIC_YEARS_WIDE,
+	/**
+	 * Cyclic year names (only supported for some calendars, and only for FORMAT usage)
+	 * @draft ICU 54
+	 */
+	UDAT_CYCLIC_YEARS_ABBREVIATED,
+	/**
+	 * Cyclic year names (only supported for some calendars, and only for FORMAT usage;
+	 * udat_setSymbols not supported for UDAT_CYCLIC_YEARS_NARROW)
+	 * @draft ICU 54
+	 */
+	UDAT_CYCLIC_YEARS_NARROW,
+	/**
+	 * Calendar zodiac  names (only supported for some calendars, and only for FORMAT usage;
+	 * udat_setSymbols not supported for UDAT_ZODIAC_NAMES_WIDE)
+	 * @draft ICU 54
+	 */
+	UDAT_ZODIAC_NAMES_WIDE,
+	/**
+	 * Calendar zodiac  names (only supported for some calendars, and only for FORMAT usage)
+	 * @draft ICU 54
+	 */
+	UDAT_ZODIAC_NAMES_ABBREVIATED,
+	/**
+	 * Calendar zodiac  names (only supported for some calendars, and only for FORMAT usage;
+	 * udat_setSymbols not supported for UDAT_ZODIAC_NAMES_NARROW)
+	 * @draft ICU 54
+	 */
+	UDAT_ZODIAC_NAMES_NARROW
+#endif  /* U_HIDE_DRAFT_API */
 } UDateFormatSymbolType;
 
 struct UDateFormatSymbols;

@@ -228,7 +228,13 @@
     <ClCompile Include="reldtfmt.cpp">
       <Filter>formatting</Filter>
     </ClCompile>
+    <ClCompile Include="scientificformathelper.cpp">
+      <Filter>formatting</Filter>
+    </ClCompile>
     <ClCompile Include="selfmt.cpp">
+      <Filter>formatting</Filter>
+    </ClCompile>
+    <ClCompile Include="sharedbreakiterator.cpp">
       <Filter>formatting</Filter>
     </ClCompile>
     <ClCompile Include="simpletz.cpp">
@@ -318,7 +324,7 @@
     <ClCompile Include="ztrans.cpp">
       <Filter>formatting</Filter>
     </ClCompile>
-    <ClCompile Include="ucln_in.c">
+    <ClCompile Include="ucln_in.cpp">
       <Filter>misc</Filter>
     </ClCompile>
     <ClCompile Include="regexcmp.cpp">
@@ -684,6 +690,9 @@
       <Filter>formatting</Filter>
     </ClInclude>
     <ClInclude Include="reldtfmt.h">
+      <Filter>formatting</Filter>
+    </ClInclude>
+    <ClInclude Include="sharedbreakiterator.h">
       <Filter>formatting</Filter>
     </ClInclude>
     <ClInclude Include="sharednumberformat.h">
@@ -1069,6 +1078,9 @@
       <Filter>formatting</Filter>
     </CustomBuild>
     <CustomBuild Include="unicode\rbtz.h">
+      <Filter>formatting</Filter>
+    </CustomBuild>
+    <CustomBuild Include="unicode\scientificformathelper.h">
       <Filter>formatting</Filter>
     </CustomBuild>
     <CustomBuild Include="unicode\selfmt.h">

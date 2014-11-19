@@ -46,34 +46,28 @@
 #include "ucol_imp.h"
 #include "utf16collationiterator.h"
 
-#define LENGTHOF(array) (int32_t)(sizeof(array)/sizeof((array)[0]))
-
 U_NAMESPACE_BEGIN
 
 namespace {
 
 class BundleImporter : public CollationRuleParser::Importer {
 public:
-    BundleImporter() : rules(NULL) {}
+    BundleImporter() {}
     virtual ~BundleImporter();
-    virtual const UnicodeString *getRules(
+    virtual void getRules(
             const char *localeID, const char *collationType,
+            UnicodeString &rules,
             const char *&errorReason, UErrorCode &errorCode);
-
-private:
-    UnicodeString *rules;
 };
 
-BundleImporter::~BundleImporter() {
-    delete rules;
-}
+BundleImporter::~BundleImporter() {}
 
-const UnicodeString *
+void
 BundleImporter::getRules(
         const char *localeID, const char *collationType,
+        UnicodeString &rules,
         const char *& /*errorReason*/, UErrorCode &errorCode) {
-    delete rules;
-    return rules = CollationLoader::loadRules(localeID, collationType, errorCode);
+    CollationLoader::loadRules(localeID, collationType, rules, errorCode);
 }
 
 }  // namespace
@@ -90,6 +84,7 @@ RuleBasedCollator::RuleBasedCollator()
         : data(NULL),
           settings(NULL),
           tailoring(NULL),
+          cacheEntry(NULL),
           validLocale(""),
           explicitlySetAttributes(0),
           actualLocaleIsSameAsValid(FALSE) {
@@ -99,6 +94,7 @@ RuleBasedCollator::RuleBasedCollator(const UnicodeString &rules, UErrorCode &err
         : data(NULL),
           settings(NULL),
           tailoring(NULL),
+          cacheEntry(NULL),
           validLocale(""),
           explicitlySetAttributes(0),
           actualLocaleIsSameAsValid(FALSE) {
@@ -110,6 +106,7 @@ RuleBasedCollator::RuleBasedCollator(const UnicodeString &rules, ECollationStren
         : data(NULL),
           settings(NULL),
           tailoring(NULL),
+          cacheEntry(NULL),
           validLocale(""),
           explicitlySetAttributes(0),
           actualLocaleIsSameAsValid(FALSE) {
@@ -122,6 +119,7 @@ RuleBasedCollator::RuleBasedCollator(const UnicodeString &rules,
         : data(NULL),
           settings(NULL),
           tailoring(NULL),
+          cacheEntry(NULL),
           validLocale(""),
           explicitlySetAttributes(0),
           actualLocaleIsSameAsValid(FALSE) {
@@ -135,6 +133,7 @@ RuleBasedCollator::RuleBasedCollator(const UnicodeString &rules,
         : data(NULL),
           settings(NULL),
           tailoring(NULL),
+          cacheEntry(NULL),
           validLocale(""),
           explicitlySetAttributes(0),
           actualLocaleIsSameAsValid(FALSE) {
@@ -147,6 +146,7 @@ RuleBasedCollator::RuleBasedCollator(const UnicodeString &rules,
         : data(NULL),
           settings(NULL),
           tailoring(NULL),
+          cacheEntry(NULL),
           validLocale(""),
           explicitlySetAttributes(0),
           actualLocaleIsSameAsValid(FALSE) {
@@ -175,35 +175,16 @@ RuleBasedCollator::internalBuildTailoring(const UnicodeString &rules,
         }
         return;
     }
-    const CollationSettings &ts = *t->settings;
-    uint16_t fastLatinPrimaries[CollationFastLatin::LATIN_LIMIT];
-    int32_t fastLatinOptions = CollationFastLatin::getOptions(
-            t->data, ts, fastLatinPrimaries, LENGTHOF(fastLatinPrimaries));
-    if((strength != UCOL_DEFAULT && strength != ts.getStrength()) ||
-            (decompositionMode != UCOL_DEFAULT &&
-                decompositionMode != ts.getFlag(CollationSettings::CHECK_FCD)) ||
-            fastLatinOptions != ts.fastLatinOptions ||
-            (fastLatinOptions >= 0 &&
-                uprv_memcmp(fastLatinPrimaries, ts.fastLatinPrimaries,
-                            sizeof(fastLatinPrimaries)) != 0)) {
-        CollationSettings *ownedSettings = SharedObject::copyOnWrite(t->settings);
-        if(ownedSettings == NULL) {
-            errorCode = U_MEMORY_ALLOCATION_ERROR;
-            return;
-        }
-        if(strength != UCOL_DEFAULT) {
-            ownedSettings->setStrength(strength, 0, errorCode);
-        }
-        if(decompositionMode != UCOL_DEFAULT) {
-            ownedSettings->setFlag(CollationSettings::CHECK_FCD, decompositionMode, 0, errorCode);
-        }
-        ownedSettings->fastLatinOptions = CollationFastLatin::getOptions(
-            t->data, *ownedSettings,
-            ownedSettings->fastLatinPrimaries, LENGTHOF(ownedSettings->fastLatinPrimaries));
-    }
-    if(U_FAILURE(errorCode)) { return; }
     t->actualLocale.setToBogus();
-    adoptTailoring(t.orphan());
+    adoptTailoring(t.orphan(), errorCode);
+    // Set attributes after building the collator,
+    // to keep the default settings consistent with the rule string.
+    if(strength != UCOL_DEFAULT) {
+        setAttribute(UCOL_STRENGTH, (UColAttributeValue)strength, errorCode);
+    }
+    if(decompositionMode != UCOL_DEFAULT) {
+        setAttribute(UCOL_NORMALIZATION_MODE, decompositionMode, errorCode);
+    }
 }
 
 // CollationBuilder implementation ----------------------------------------- ***
@@ -266,8 +247,8 @@ CollationBuilder::parseAndBuild(const UnicodeString &ruleString,
     variableTop = base->settings->variableTop;
     parser.setSink(this);
     parser.setImporter(importer);
-    parser.parse(ruleString, *SharedObject::copyOnWrite(tailoring->settings),
-                 outParseError, errorCode);
+    CollationSettings &ownedSettings = *SharedObject::copyOnWrite(tailoring->settings);
+    parser.parse(ruleString, ownedSettings, outParseError, errorCode);
     errorReason = parser.getErrorReason();
     if(U_FAILURE(errorCode)) { return NULL; }
     if(dataBuilder->hasMappings()) {
@@ -291,6 +272,9 @@ CollationBuilder::parseAndBuild(const UnicodeString &ruleString,
         tailoring->data = baseData;
     }
     if(U_FAILURE(errorCode)) { return NULL; }
+    ownedSettings.fastLatinOptions = CollationFastLatin::getOptions(
+        tailoring->data, ownedSettings,
+        ownedSettings.fastLatinPrimaries, UPRV_LENGTHOF(ownedSettings.fastLatinPrimaries));
     tailoring->rules = ruleString;
     tailoring->rules.getTerminatedBuffer();  // ensure NUL-termination
     tailoring->setVersion(base->version, rulesVersion);
@@ -566,12 +550,9 @@ CollationBuilder::getSpecialResetPosition(const UnicodeString &str,
         ce = rootElements.firstCEWithPrimaryAtLeast(
             baseData->getFirstPrimaryForGroup(USCRIPT_HAN));
         break;
-    case CollationRuleParser::FIRST_IMPLICIT: {
-        uint32_t ce32 = baseData->getCE32(0x4e00);
-        U_ASSERT(Collation::hasCE32Tag(ce32, Collation::OFFSET_TAG));
-        ce = baseData->getCEFromOffsetCE32(0x4e00, ce32);
+    case CollationRuleParser::FIRST_IMPLICIT:
+        ce = baseData->getSingleCE(0x4e00, errorCode);
         break;
-    }
     case CollationRuleParser::LAST_IMPLICIT:
         // We do not support tailoring to an unassigned-implicit CE.
         errorCode = U_UNSUPPORTED_ERROR;

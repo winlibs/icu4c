@@ -730,7 +730,7 @@ public:
     static const SharedNumberFormat* U_EXPORT2 createSharedInstance(
             const Locale& inLocale, UNumberFormatStyle style, UErrorCode& status);
 
-#endif
+#endif  /* U_HIDE_INTERNAL_API */
 
     /**
      * Returns a currency format for the current default locale.
@@ -948,7 +948,7 @@ public:
      * @stable ICU 2.6
      */
     const UChar* getCurrency() const;
-
+	
     /* Cannot use #ifndef U_HIDE_DRAFT_API for the following draft method since it is virtual */
     /**
      * Set a particular UDisplayContext value in the formatter, such as

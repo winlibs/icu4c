@@ -28,7 +28,6 @@
 #include "unicode/msgfmt.h"
 #include "unicode/tznames.h"
 #include "cpputils.h"
-#include "ucln_in.h"
 #include "umutex.h"
 #include "cmemory.h"
 #include "cstring.h"
@@ -158,6 +157,7 @@ UOBJECT_DEFINE_RTTI_IMPLEMENTATION(DateFormatSymbols)
 static const char gErasTag[]="eras";
 static const char gCyclicNameSetsTag[]="cyclicNameSets";
 static const char gNameSetYearsTag[]="years";
+static const char gNameSetZodiacsTag[]="zodiacs";
 static const char gMonthNamesTag[]="monthNames";
 static const char gMonthPatternsTag[]="monthPatterns";
 static const char gDayNamesTag[]="dayNames";
@@ -328,6 +328,12 @@ DateFormatSymbols::copyData(const DateFormatSymbols& other) {
         fShortYearNames = NULL;
         fShortYearNamesCount = 0;
     }
+    if (other.fShortZodiacNames != NULL) {
+        assignArray(fShortZodiacNames, fShortZodiacNamesCount, other.fShortZodiacNames, other.fShortZodiacNamesCount);
+    } else {
+        fShortZodiacNames = NULL;
+        fShortZodiacNamesCount = 0;
+    }
  
     if (other.fZoneStrings != NULL) {
         fZoneStringsColCount = other.fZoneStringsColCount;
@@ -391,6 +397,7 @@ void DateFormatSymbols::dispose()
     if (fStandaloneShortQuarters)   delete[] fStandaloneShortQuarters;
     if (fLeapMonthPatterns)         delete[] fLeapMonthPatterns;
     if (fShortYearNames)            delete[] fShortYearNames;
+    if (fShortZodiacNames)          delete[] fShortZodiacNames;
 
     disposeZoneStrings();
 }
@@ -461,6 +468,7 @@ DateFormatSymbols::operator==(const DateFormatSymbols& other) const
         fStandaloneShortQuartersCount == other.fStandaloneShortQuartersCount &&
         fLeapMonthPatternsCount == other.fLeapMonthPatternsCount &&
         fShortYearNamesCount == other.fShortYearNamesCount &&
+        fShortZodiacNamesCount == other.fShortZodiacNamesCount &&
         (uprv_memcmp(fCapitalization, other.fCapitalization, sizeof(fCapitalization))==0))
     {
         // Now compare the arrays themselves
@@ -487,7 +495,8 @@ DateFormatSymbols::operator==(const DateFormatSymbols& other) const
             arrayCompare(fStandaloneQuarters, other.fStandaloneQuarters, fStandaloneQuartersCount) &&
             arrayCompare(fStandaloneShortQuarters, other.fStandaloneShortQuarters, fStandaloneShortQuartersCount) &&
             arrayCompare(fLeapMonthPatterns, other.fLeapMonthPatterns, fLeapMonthPatternsCount) &&
-            arrayCompare(fShortYearNames, other.fShortYearNames, fShortYearNamesCount))
+            arrayCompare(fShortYearNames, other.fShortYearNames, fShortYearNamesCount) &&
+            arrayCompare(fShortZodiacNames, other.fShortZodiacNames, fShortZodiacNamesCount))
         {
             // Compare the contents of fZoneStrings
             if (fZoneStrings == NULL && other.fZoneStrings == NULL) {
@@ -728,6 +737,50 @@ DateFormatSymbols::getLeapMonthPatterns(int32_t &count) const
 {
     count = fLeapMonthPatternsCount;
     return fLeapMonthPatterns;
+}
+
+const UnicodeString*
+DateFormatSymbols::getYearNames(int32_t& count,
+                                DtContextType /*ignored*/, DtWidthType /*ignored*/) const
+{
+    count = fShortYearNamesCount;
+    return fShortYearNames;
+}
+
+void
+DateFormatSymbols::setYearNames(const UnicodeString* yearNames, int32_t count,
+                                DtContextType context, DtWidthType width)
+{
+    if (context == FORMAT && width == ABBREVIATED) {
+        if (fShortYearNames) {
+            delete[] fShortYearNames;
+        }
+        fShortYearNames = newUnicodeStringArray(count);
+        uprv_arrayCopy(yearNames, fShortYearNames, count);
+        fShortYearNamesCount = count;
+    }
+}
+
+const UnicodeString*
+DateFormatSymbols::getZodiacNames(int32_t& count,
+                                DtContextType /*ignored*/, DtWidthType /*ignored*/) const
+{
+    count = fShortZodiacNamesCount;
+    return fShortZodiacNames;
+}
+
+void
+DateFormatSymbols::setZodiacNames(const UnicodeString* zodiacNames, int32_t count,
+                                DtContextType context, DtWidthType width)
+{
+    if (context == FORMAT && width == ABBREVIATED) {
+        if (fShortZodiacNames) {
+            delete[] fShortZodiacNames;
+        }
+        fShortZodiacNames = newUnicodeStringArray(count);
+        uprv_arrayCopy(zodiacNames, fShortZodiacNames, count);
+        fShortZodiacNamesCount = count;
+    }
 }
 
 //------------------------------------------------------
@@ -1389,6 +1442,8 @@ DateFormatSymbols::initializeData(const Locale& locale, const char *type, UError
     fLeapMonthPatternsCount = 0;
     fShortYearNames = NULL;
     fShortYearNamesCount = 0;
+    fShortZodiacNames = NULL;
+    fShortZodiacNamesCount = 0;
     fZoneStringsRowCount = 0;
     fZoneStringsColCount = 0;
     fZoneStrings = NULL;
@@ -1440,6 +1495,21 @@ DateFormatSymbols::initializeData(const Locale& locale, const char *type, UError
             initLeapMonthPattern(fLeapMonthPatterns, kLeapMonthPatternStandaloneNarrow, calData.getByKey3(gMonthPatternsTag, gNamesStandaloneTag, gNamesNarrowTag, tempStatus), tempStatus);
             initLeapMonthPattern(fLeapMonthPatterns, kLeapMonthPatternNumeric, calData.getByKey3(gMonthPatternsTag, gNamesNumericTag, gNamesAllTag, tempStatus), tempStatus);
             if (U_SUCCESS(tempStatus)) {
+                // Hack to fix bad C inheritance for dangi monthPatterns (OK in J); this should be handled by aliases in root, but isn't.
+                // The ordering of the following statements is important.
+                if (fLeapMonthPatterns[kLeapMonthPatternFormatAbbrev].isEmpty()) {
+                    fLeapMonthPatterns[kLeapMonthPatternFormatAbbrev].setTo(fLeapMonthPatterns[kLeapMonthPatternFormatWide]);
+                };
+                if (fLeapMonthPatterns[kLeapMonthPatternFormatNarrow].isEmpty()) {
+                    fLeapMonthPatterns[kLeapMonthPatternFormatNarrow].setTo(fLeapMonthPatterns[kLeapMonthPatternStandaloneNarrow]);
+                };
+                if (fLeapMonthPatterns[kLeapMonthPatternStandaloneWide].isEmpty()) {
+                    fLeapMonthPatterns[kLeapMonthPatternStandaloneWide].setTo(fLeapMonthPatterns[kLeapMonthPatternFormatWide]);
+                };
+                if (fLeapMonthPatterns[kLeapMonthPatternStandaloneAbbrev].isEmpty()) {
+                    fLeapMonthPatterns[kLeapMonthPatternStandaloneAbbrev].setTo(fLeapMonthPatterns[kLeapMonthPatternFormatAbbrev]);
+                };
+                // end of hack
                 fLeapMonthPatternsCount = kMonthPatternsCount;
             } else {
                 delete[] fLeapMonthPatterns;
@@ -1463,6 +1533,19 @@ DateFormatSymbols::initializeData(const Locale& locale, const char *type, UError
                 ures_close(nameSetYearsFmt);
             }
             ures_close(nameSetYears);
+        }
+        UResourceBundle *nameSetZodiacs = ures_getByKeyWithFallback(cyclicNameSets, gNameSetZodiacsTag, NULL, &tempStatus);
+        if (U_SUCCESS(tempStatus)) {
+            UResourceBundle *nameSetZodiacsFmt = ures_getByKeyWithFallback(nameSetZodiacs, gNamesFormatTag, NULL, &tempStatus);
+            if (U_SUCCESS(tempStatus)) {
+                UResourceBundle *nameSetZodiacsFmtAbbrev = ures_getByKeyWithFallback(nameSetZodiacsFmt, gNamesAbbrTag, NULL, &tempStatus);
+                if (U_SUCCESS(tempStatus)) {
+                    initField(&fShortZodiacNames, fShortZodiacNamesCount, nameSetZodiacsFmtAbbrev, tempStatus);
+                    ures_close(nameSetZodiacsFmtAbbrev);
+                }
+                ures_close(nameSetZodiacsFmt);
+            }
+            ures_close(nameSetZodiacs);
         }
     }
 

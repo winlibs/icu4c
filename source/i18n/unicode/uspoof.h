@@ -329,7 +329,7 @@ uspoof_open(UErrorCode *status);
 
 
 /**
- * Open a Spoof checker from its serialized from, stored in 32-bit-aligned memory.
+ * Open a Spoof checker from its serialized form, stored in 32-bit-aligned memory.
  * Inverse of uspoof_serialize().
  * The memory containing the serialized data must remain valid and unchanged
  * as long as the spoof checker, or any cloned copies of the spoof checker,
@@ -355,9 +355,9 @@ uspoof_openFromSerialized(const void *data, int32_t length, int32_t *pActualLeng
 
 /**
   * Open a Spoof Checker from the source form of the spoof data.
-  * The Three inputs correspond to the Unicode data files confusables.txt
-  * confusablesWholeScript.txt and xidmdifications.txt as described in
-  * Unicode UAX #39.  The syntax of the source data is as described in UAX #39 for
+  * The two inputs correspond to the Unicode data files confusables.txt
+  * and confusablesWholeScript.txt as described in Unicode UAX #39.
+  * The syntax of the source data is as described in UAX #39 for
   * these files, and the content of these files is acceptable input.
   *
   * The character encoding of the (char *) input text is UTF-8.
@@ -971,7 +971,6 @@ uspoof_getSkeletonUnicodeString(const USpoofChecker *sc,
                                 UErrorCode *status);
 #endif   /* U_SHOW_CPLUSPLUS_API */
 
-#ifndef U_HIDE_DRAFT_API
 /**
   * Get the set of Candidate Characters for Inclusion in Identifiers, as defined
   * in Unicode UAX #31, http://www.unicode.org/reports/tr31/#Table_Candidate_Characters_for_Inclusion_in_Identifiers
@@ -981,9 +980,9 @@ uspoof_getSkeletonUnicodeString(const USpoofChecker *sc,
   *
   * @param status The error code, set if a problem occurs while creating the set.
   *
-  * @draft ICU 51
+  * @stable ICU 51
   */
-U_DRAFT const USet * U_EXPORT2
+U_STABLE const USet * U_EXPORT2
 uspoof_getInclusionSet(UErrorCode *status);
 
 /**
@@ -995,9 +994,9 @@ uspoof_getInclusionSet(UErrorCode *status);
   *
   * @param status The error code, set if a problem occurs while creating the set.
   *
-  * @draft ICU 51
+  * @stable ICU 51
   */
-U_DRAFT const USet * U_EXPORT2
+U_STABLE const USet * U_EXPORT2
 uspoof_getRecommendedSet(UErrorCode *status);
 
 #if U_SHOW_CPLUSPLUS_API
@@ -1011,9 +1010,9 @@ uspoof_getRecommendedSet(UErrorCode *status);
   *
   * @param status The error code, set if a problem occurs while creating the set.
   *
-  * @draft ICU 51
+  * @stable ICU 51
   */
-U_DRAFT const icu::UnicodeSet * U_EXPORT2
+U_STABLE const icu::UnicodeSet * U_EXPORT2
 uspoof_getInclusionUnicodeSet(UErrorCode *status);
 
 /**
@@ -1025,13 +1024,12 @@ uspoof_getInclusionUnicodeSet(UErrorCode *status);
   *
   * @param status The error code, set if a problem occurs while creating the set.
   *
-  * @draft ICU 51
+  * @stable ICU 51
   */
-U_DRAFT const icu::UnicodeSet * U_EXPORT2
+U_STABLE const icu::UnicodeSet * U_EXPORT2
 uspoof_getRecommendedUnicodeSet(UErrorCode *status);
 
 #endif /* U_SHOW_CPLUSPLUS_API */
-#endif /* U_HIDE_DRAFT_API */
 
 /**
  * Serialize the data for a spoof detector into a chunk of memory.

@@ -362,6 +362,14 @@ typedef enum {
 
 /**
  * Open a UCollator for comparing strings.
+ *
+ * For some languages, multiple collation types are available;
+ * for example, "de@collation=phonebook".
+ * Starting with ICU 54, collation attributes can be specified via locale keywords as well,
+ * in the old locale extension syntax ("el@colCaseFirst=upper")
+ * or in language tag syntax ("el-u-kf-upper").
+ * See <a href="http://userguide.icu-project.org/collation/api">User Guide: Collation API</a>.
+ *
  * The UCollator pointer is used in all the calls to the Collation 
  * service. After finished, collator must be disposed of by calling
  * {@link #ucol_close }.
@@ -413,6 +421,7 @@ ucol_openRules( const UChar        *rules,
                 UParseError        *parseError,
                 UErrorCode         *status);
 
+#ifndef U_HIDE_DEPRECATED_API
 /** 
  * Open a collator defined by a short form string.
  * The structure and the syntax of the string is defined in the "Naming collators"
@@ -444,14 +453,14 @@ ucol_openRules( const UChar        *rules,
  * @see ucol_setVariableTop
  * @see ucol_getShortDefinitionString
  * @see ucol_normalizeShortDefinitionString
- * @stable ICU 3.0
- *
+ * @deprecated ICU 54 Use ucol_open() with language tag collation keywords instead.
  */
-U_STABLE UCollator* U_EXPORT2
+U_DEPRECATED UCollator* U_EXPORT2
 ucol_openFromShortString( const char *definition,
                           UBool forceDefaults,
                           UParseError *parseError,
                           UErrorCode *status);
+#endif  /* U_HIDE_DEPRECATED_API */
 
 #ifndef U_HIDE_DEPRECATED_API
 /**
@@ -858,31 +867,32 @@ ucol_getKeywordValuesForLocale(const char* key,
                                UErrorCode* status);
 
 /**
- * Return the functionally equivalent locale for the given
- * requested locale, with respect to given keyword, for the
- * collation service.  If two locales return the same result, then
- * collators instantiated for these locales will behave
- * equivalently.  The converse is not always true; two collators
+ * Return the functionally equivalent locale for the specified
+ * input locale, with respect to given keyword, for the
+ * collation service. If two different input locale + keyword
+ * combinations produce the same result locale, then collators
+ * instantiated for these two different input locales will behave
+ * equivalently. The converse is not always true; two collators
  * may in fact be equivalent, but return different results, due to
- * internal details.  The return result has no other meaning than
+ * internal details. The return result has no other meaning than
  * that stated above, and implies nothing as to the relationship
- * between the two locales.  This is intended for use by
+ * between the two locales. This is intended for use by
  * applications who wish to cache collators, or otherwise reuse
- * collators when possible.  The functional equivalent may change
- * over time.  For more information, please see the <a
+ * collators when possible. The functional equivalent may change
+ * over time. For more information, please see the <a
  * href="http://userguide.icu-project.org/locale#TOC-Locales-and-Services">
  * Locales and Services</a> section of the ICU User Guide.
- * @param result fillin for the functionally equivalent locale
+ * @param result fillin for the functionally equivalent result locale
  * @param resultCapacity capacity of the fillin buffer
  * @param keyword a particular keyword as enumerated by
  * ucol_getKeywords.
- * @param locale the requested locale
+ * @param locale the specified input locale
  * @param isAvailable if non-NULL, pointer to a fillin parameter that
- * indicates whether the requested locale was 'available' to the
- * collation service. A locale is defined as 'available' if it
+ * on return indicates whether the specified input locale was 'available'
+ * to the collation service. A locale is defined as 'available' if it
  * physically exists within the collation locale data.
  * @param status pointer to input-output error code
- * @return the actual buffer size needed for the locale.  If greater
+ * @return the actual buffer size needed for the locale. If greater
  * than resultCapacity, the returned full name will be truncated and
  * an error code will be returned.
  * @stable ICU 3.0
@@ -904,6 +914,7 @@ U_STABLE const UChar* U_EXPORT2
 ucol_getRules(    const    UCollator    *coll, 
         int32_t            *length);
 
+#ifndef U_HIDE_DEPRECATED_API
 /** Get the short definition string for a collator. This API harvests the collator's
  *  locale and the attribute set and produces a string that can be used for opening 
  *  a collator with the same attributes using the ucol_openFromShortString API.
@@ -922,9 +933,9 @@ ucol_getRules(    const    UCollator    *coll,
  *  @return length of the resulting string
  *  @see ucol_openFromShortString
  *  @see ucol_normalizeShortDefinitionString
- *  @stable ICU 3.0
+ *  @deprecated ICU 54
  */
-U_STABLE int32_t U_EXPORT2
+U_DEPRECATED int32_t U_EXPORT2
 ucol_getShortDefinitionString(const UCollator *coll,
                               const char *locale,
                               char *buffer,
@@ -948,20 +959,24 @@ ucol_getShortDefinitionString(const UCollator *coll,
  *  @see ucol_openFromShortString
  *  @see ucol_getShortDefinitionString
  * 
- *  @stable ICU 3.0
+ *  @deprecated ICU 54
  */
 
-U_STABLE int32_t U_EXPORT2
+U_DEPRECATED int32_t U_EXPORT2
 ucol_normalizeShortDefinitionString(const char *source,
                                     char *destination,
                                     int32_t capacity,
                                     UParseError *parseError,
                                     UErrorCode *status);
+#endif  /* U_HIDE_DEPRECATED_API */
 
 
 /**
  * Get a sort key for a string from a UCollator.
  * Sort keys may be compared using <TT>strcmp</TT>.
+ *
+ * Note that sort keys are often less efficient than simply doing comparison.  
+ * For more details, see the ICU User Guide.
  *
  * Like ICU functions that write to an output buffer, the buffer contents
  * is undefined if the buffer capacity (resultLength parameter) is too small.
@@ -1104,6 +1119,17 @@ ucol_getUCAVersion(const UCollator* coll, UVersionInfo info);
  *
  * This is useful, for example, for combining sort keys from first and last names
  * to sort such pairs.
+ * See http://www.unicode.org/reports/tr10/#Merging_Sort_Keys
+ *
+ * The recommended way to achieve "merged" sorting is by
+ * concatenating strings with U+FFFE between them.
+ * The concatenation has the same sort order as the merged sort keys,
+ * but merge(getSortKey(str1), getSortKey(str2)) may differ from getSortKey(str1 + '\uFFFE' + str2).
+ * Using strings with U+FFFE may yield shorter sort keys.
+ *
+ * For details about Sort Key Features see
+ * http://userguide.icu-project.org/collation/api#TOC-Sort-Key-Features
+ *
  * It is possible to merge multiple sort keys by consecutively merging
  * another one with the intermediate result.
  *
@@ -1199,6 +1225,7 @@ ucol_getMaxVariable(const UCollator *coll);
 
 #endif  /* U_HIDE_DRAFT_API */
 
+#ifndef U_HIDE_DEPRECATED_API
 /**
  * Sets the variable top to the primary weight of the specified string.
  *
@@ -1223,6 +1250,7 @@ U_DEPRECATED uint32_t U_EXPORT2
 ucol_setVariableTop(UCollator *coll, 
                     const UChar *varTop, int32_t len, 
                     UErrorCode *status);
+#endif  /* U_HIDE_DEPRECATED_API */
 
 /** 
  * Gets the variable top value of a Collator. 
@@ -1422,14 +1450,14 @@ ucol_cloneBinary(const UCollator *coll,
  *  ucol_cloneBinary. Binary image used in instantiation of the 
  *  collator remains owned by the user and should stay around for 
  *  the lifetime of the collator. The API also takes a base collator
- *  which usually should be the root collator.
+ *  which must be the root collator.
  *  @param bin binary image owned by the user and required through the
  *             lifetime of the collator
  *  @param length size of the image. If negative, the API will try to
  *                figure out the length of the image
- *  @param base fallback collator, usually the root collator. Base is required to be
- *              present through the lifetime of the collator. Currently 
- *              it cannot be NULL.
+ *  @param base Base collator, for lookup of untailored characters.
+ *              Must be the root collator, must not be NULL.
+ *              The base is required to be present through the lifetime of the collator.
  *  @param status for catching errors
  *  @return newly created collator
  *  @see ucol_cloneBinary

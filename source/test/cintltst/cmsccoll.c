@@ -2783,7 +2783,7 @@ static int32_t TestEqualsForCollator(const char* locName, UCollator *source, UCo
         errorNo++;
     }
     ucol_close(target);
-    if(uprv_strcmp(ucol_getLocaleByType(source, ULOC_REQUESTED_LOCALE, &status), ucol_getLocaleByType(source, ULOC_ACTUAL_LOCALE, &status)) == 0) {
+    if(uprv_strcmp(locName, ucol_getLocaleByType(source, ULOC_ACTUAL_LOCALE, &status)) == 0) {
         target = ucol_safeClone(source, NULL, NULL, &status);
         if(U_FAILURE(status)) {
             log_err("Error creating clone\n");
@@ -2818,7 +2818,8 @@ static int32_t TestEqualsForCollator(const char* locName, UCollator *source, UCo
             errorNo++;
             return errorNo;
         }
-        if(!ucol_equals(source, target)) {
+        /* Note: The tailoring rule string is an optional data item. */
+        if(!ucol_equals(source, target) && sourceRulesLen != 0) {
             log_err("Collator different from collator that was created from the same rules\n");
             errorNo++;
         }
@@ -2830,7 +2831,7 @@ static int32_t TestEqualsForCollator(const char* locName, UCollator *source, UCo
 
 static void TestEquals(void) {
     /* ucol_equals is not currently a public API. There is a chance that it will become
-    * something like this, but currently it is only used by RuleBasedCollator::operator==
+    * something like this.
     */
     /* test whether the two collators instantiated from the same locale are equal */
     UErrorCode status = U_ZERO_ERROR;
@@ -2885,8 +2886,8 @@ static void TestEquals(void) {
     if(!ucol_equals(source, source)) {
         log_err("Same collator not equal\n");
     }
-    if(TestEqualsForCollator(locName, source, target)) {
-        log_err("Errors for root\n", locName);
+    if(TestEqualsForCollator("root", source, target)) {
+        log_err("Errors for root\n");
     }
     ucol_close(source);
 
@@ -4690,6 +4691,7 @@ static void TestReorderingAPI(void)
     int32_t reorderCodes[3] = {USCRIPT_GREEK, USCRIPT_HAN, UCOL_REORDER_CODE_PUNCTUATION};
     int32_t duplicateReorderCodes[] = {USCRIPT_CUNEIFORM, USCRIPT_GREEK, UCOL_REORDER_CODE_CURRENCY, USCRIPT_EGYPTIAN_HIEROGLYPHS};
     int32_t reorderCodesStartingWithDefault[] = {UCOL_REORDER_CODE_DEFAULT, USCRIPT_GREEK, USCRIPT_HAN, UCOL_REORDER_CODE_PUNCTUATION};
+    int32_t reorderCodeNone = UCOL_REORDER_CODE_NONE;
     UCollationResult collResult;
     int32_t retrievedReorderCodesLength;
     int32_t retrievedReorderCodes[10];
@@ -4764,6 +4766,22 @@ static void TestReorderingAPI(void)
     collResult = ucol_strcoll(myCollation, greekString, LEN(greekString), punctuationString, LEN(punctuationString));
     if (collResult != UCOL_GREATER) {
         log_err_status(status, "ERROR: collation result should have been UCOL_GREATER\n");
+        return;
+    }
+
+    /* clear the reordering using [NONE] */
+    ucol_setReorderCodes(myCollation, &reorderCodeNone, 1, &status);    
+    if (U_FAILURE(status)) {
+        log_err_status(status, "ERROR: setting reorder codes to [NONE]: %s\n", myErrorName(status));
+        return;
+    }
+
+    /* get the reordering again */
+    retrievedReorderCodesLength = ucol_getReorderCodes(myCollation, NULL, 0, &status);
+    if (retrievedReorderCodesLength != 0) {
+        log_err_status(status,
+                       "ERROR: [NONE] retrieved reorder codes length was %d but should have been 0\n",
+                       retrievedReorderCodesLength);
         return;
     }
 
@@ -4921,17 +4939,22 @@ static void TestReorderingAPIWithRuleCreatedCollator(void)
     ucol_close(myCollation);
 }
 
-static int compareUScriptCodes(const void * a, const void * b)
-{
-  return ( *(int32_t*)a - *(int32_t*)b );
+static UBool containsExpectedScript(const int32_t scripts[], int32_t length, int32_t expectedScript) {
+    int32_t i;
+    for (i = 0; i < length; ++i) {
+        if (expectedScript == scripts[i]) { return TRUE; }
+    }
+    return FALSE;
 }
 
 static void TestEquivalentReorderingScripts(void) {
     UErrorCode status = U_ZERO_ERROR;
-    int32_t equivalentScripts[50];
-    int32_t equivalentScriptsLength;
-    int loopIndex;
-    int32_t equivalentScriptsResult[] = {
+    int32_t equivalentScripts[100];
+    int32_t length;
+    int i;
+    int32_t prevScript;
+    /* At least these scripts are expected to be equivalent. There may be more. */
+    static const int32_t expectedScripts[] = {
         USCRIPT_BOPOMOFO,
         USCRIPT_LISU,
         USCRIPT_LYCIAN,
@@ -4960,46 +4983,49 @@ static void TestEquivalentReorderingScripts(void) {
         USCRIPT_MEROITIC_HIEROGLYPHS
     };
 
-    qsort(equivalentScriptsResult, LEN(equivalentScriptsResult), sizeof(int32_t), compareUScriptCodes);
-    
     /* UScript.GOTHIC */
-    equivalentScriptsLength = ucol_getEquivalentReorderCodes(USCRIPT_GOTHIC, equivalentScripts, LEN(equivalentScripts), &status);
+    length = ucol_getEquivalentReorderCodes(
+            USCRIPT_GOTHIC, equivalentScripts, LEN(equivalentScripts), &status);
     if (U_FAILURE(status)) {
-        log_err_status(status, "ERROR: retrieving equivalent reorder codes: %s\n", myErrorName(status));
+        log_err_status(status, "ERROR/Gothic: retrieving equivalent reorder codes: %s\n", myErrorName(status));
         return;
     }
-    /*
-    fprintf(stdout, "@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@\n");
-    fprintf(stdout, "equivalentScriptsLength = %d\n", equivalentScriptsLength);
-    for (loopIndex = 0; loopIndex < equivalentScriptsLength; loopIndex++) {
-        fprintf(stdout, "%d = %x\n", loopIndex, equivalentScripts[loopIndex]);
+    if (length < LEN(expectedScripts)) {
+        log_err("ERROR/Gothic: retrieved equivalent script length wrong: "
+                "expected at least %d, was = %d\n",
+                LEN(expectedScripts), length);
     }
-    */
-    if (equivalentScriptsLength != LEN(equivalentScriptsResult)) {
-        log_err_status(status, "ERROR: retrieved equivalent script length wrong: expected = %d, was = %d\n", LEN(equivalentScriptsResult), equivalentScriptsLength);
-        return;
+    prevScript = -1;
+    for (i = 0; i < length; ++i) {
+        int32_t script = equivalentScripts[i];
+        if (script <= prevScript) {
+            log_err("ERROR/Gothic: equivalent scripts out of order at index %d\n", i);
+        }
+        prevScript = script;
     }
-    for (loopIndex = 0; loopIndex < equivalentScriptsLength; loopIndex++) {
-        if (equivalentScriptsResult[loopIndex] != equivalentScripts[loopIndex]) {
-            log_err_status(status, "ERROR: equivalent scripts results don't match: expected = %d, was = %d\n", equivalentScriptsResult[loopIndex], equivalentScripts[loopIndex]);
-            return;
+    for (i = 0; i < LEN(expectedScripts); i++) {
+        if (!containsExpectedScript(equivalentScripts, length, expectedScripts[i])) {
+            log_err("ERROR/Gothic: equivalent scripts do not contain %d\n",
+                    expectedScripts[i]);
         }
     }
 
     /* UScript.SHAVIAN */
-    equivalentScriptsLength = ucol_getEquivalentReorderCodes(USCRIPT_SHAVIAN, equivalentScripts, LEN(equivalentScripts), &status);
+    length = ucol_getEquivalentReorderCodes(
+            USCRIPT_SHAVIAN, equivalentScripts, LEN(equivalentScripts), &status);
     if (U_FAILURE(status)) {
-        log_err_status(status, "ERROR: retrieving equivalent reorder codes: %s\n", myErrorName(status));
+        log_err_status(status, "ERROR/Shavian: retrieving equivalent reorder codes: %s\n", myErrorName(status));
         return;
     }
-    if (equivalentScriptsLength != LEN(equivalentScriptsResult)) {
-        log_err_status(status, "ERROR: retrieved equivalent script length wrong: expected = %d, was = %d\n", LEN(equivalentScriptsResult), equivalentScriptsLength);
-        return;
+    if (length < LEN(expectedScripts)) {
+        log_err("ERROR/Shavian: retrieved equivalent script length wrong: "
+                "expected at least %d, was = %d\n",
+                LEN(expectedScripts), length);
     }
-    for (loopIndex = 0; loopIndex < equivalentScriptsLength; loopIndex++) {
-        if (equivalentScriptsResult[loopIndex] != equivalentScripts[loopIndex]) {
-            log_err_status(status, "ERROR: equivalent scripts results don't match: expected = %d, was = %d\n", equivalentScriptsResult[loopIndex], equivalentScripts[loopIndex]);
-            return;
+    for (i = 0; i < LEN(expectedScripts); i++) {
+        if (!containsExpectedScript(equivalentScripts, length, expectedScripts[i])) {
+            log_err("ERROR/Shavian: equivalent scripts do not contain %d\n",
+                    expectedScripts[i]);
         }
     }
 }
@@ -5503,6 +5529,11 @@ static void TestImport(void)
     }
 
     virules = (UChar*) ucol_getRules(vicoll, &viruleslength);
+    if(viruleslength == 0) {
+        log_data_err("missing vi tailoring rule string\n");
+        ucol_close(vicoll);
+        return;
+    }
     escoll = ucol_open("es", &status);
     esrules = (UChar*) ucol_getRules(escoll, &esruleslength);
     viesrules = (UChar*)uprv_malloc((viruleslength+esruleslength+1)*sizeof(UChar*));
@@ -5602,6 +5633,11 @@ static void TestImportWithType(void)
         return;
     }
     virules = ucol_getRules(vicoll, &viruleslength);
+    if(viruleslength == 0) {
+        log_data_err("missing vi tailoring rule string\n");
+        ucol_close(vicoll);
+        return;
+    }
     /* decoll = ucol_open("de@collation=phonebook", &status); */
     decoll = ucol_open("de-u-co-phonebk", &status);
     if(U_FAILURE(status)){

@@ -35,8 +35,6 @@
 #include "uvectr64.h"
 #include "uvector.h"
 
-#define LENGTHOF(array) (int32_t)(sizeof(array)/sizeof((array)[0]))
-
 U_NAMESPACE_BEGIN
 
 CollationDataBuilder::CEModifier::~CEModifier() {}
@@ -51,6 +49,10 @@ CollationDataBuilder::CEModifier::~CEModifier() {}
  * Context strings must be unique and in ascending order.
  */
 struct ConditionalCE32 : public UMemory {
+    ConditionalCE32()
+            : context(),
+              ce32(0), defaultCE32(Collation::NO_CE32), builtCE32(Collation::NO_CE32),
+              next(-1) {}
     ConditionalCE32(const UnicodeString &ct, uint32_t ce)
             : context(ct),
               ce32(ce), defaultCE32(Collation::NO_CE32), builtCE32(Collation::NO_CE32),
@@ -420,6 +422,7 @@ CollationDataBuilder::getLongPrimaryIfSingleCE(UChar32 c) const {
 int64_t
 CollationDataBuilder::getSingleCE(UChar32 c, UErrorCode &errorCode) const {
     if(U_FAILURE(errorCode)) { return 0; }
+    // Keep parallel with CollationData::getSingleCE().
     UBool fromBase = FALSE;
     uint32_t ce32 = utrie2_get32(trie, c);
     if(ce32 == Collation::FALLBACK_CE32) {
@@ -794,7 +797,7 @@ CollationDataBuilder::copyFromBaseCE32(UChar32 c, uint32_t ce32, UBool withConte
         if(!withContext) {
             return copyFromBaseCE32(c, ce32, FALSE, errorCode);
         }
-        ConditionalCE32 head(UnicodeString(), 0);
+        ConditionalCE32 head;
         UnicodeString context((UChar)0);
         int32_t index;
         if(Collation::isContractionCE32(ce32)) {
@@ -830,7 +833,7 @@ CollationDataBuilder::copyFromBaseCE32(UChar32 c, uint32_t ce32, UBool withConte
             ce32 = CollationData::readCE32(p);  // Default if no suffix match.
             return copyFromBaseCE32(c, ce32, FALSE, errorCode);
         }
-        ConditionalCE32 head(UnicodeString(), 0);
+        ConditionalCE32 head;
         UnicodeString context((UChar)0);
         copyContractionsFromBaseCE32(context, c, ce32, &head, errorCode);
         ce32 = makeBuilderContextCE32(head.next);

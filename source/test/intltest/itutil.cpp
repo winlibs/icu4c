@@ -33,8 +33,9 @@ extern IntlTest *createBytesTrieTest();
 static IntlTest *createLocalPointerTest();
 extern IntlTest *createUCharsTrieTest();
 static IntlTest *createEnumSetTest();
-extern IntlTest *createLRUCacheTest();
 extern IntlTest *createSimplePatternFormatterTest();
+extern IntlTest *createUnifiedCacheTest();
+extern IntlTest *createQuantityFormatterTest();
 
 #define CASE(id, test) case id:                               \
                           name = #test;                       \
@@ -98,18 +99,26 @@ void IntlTestUtilities::runIndexedTest( int32_t index, UBool exec, const char* &
             }
             break;
         case 20:
-            name = "LRUCacheTest";
-            if (exec) {
-                logln("TestSuite LRUCacheTest---"); logln();
-                LocalPointer<IntlTest> test(createLRUCacheTest());
-                callTest(*test, par);
-            }
-            break;
-        case 21:
             name = "SimplePatternFormatterTest";
             if (exec) {
                 logln("TestSuite SimplePatternFormatterTest---"); logln();
                 LocalPointer<IntlTest> test(createSimplePatternFormatterTest());
+                callTest(*test, par);
+            }
+            break;
+        case 21:
+            name = "UnifiedCacheTest";
+            if (exec) {
+                logln("TestSuite UnifiedCacheTest---"); logln();
+                LocalPointer<IntlTest> test(createUnifiedCacheTest());
+                callTest(*test, par);
+            }
+            break;
+        case 22:
+            name = "QuantityFormatterTest";
+            if (exec) {
+                logln("TestSuite QuantityFormatterTest---"); logln();
+                LocalPointer<IntlTest> test(createQuantityFormatterTest());
                 callTest(*test, par);
             }
             break;

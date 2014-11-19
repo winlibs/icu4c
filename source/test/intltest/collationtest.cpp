@@ -48,8 +48,6 @@
 #include "uvectr64.h"
 #include "writesrc.h"
 
-#define LENGTHOF(array) (int32_t)(sizeof(array)/sizeof((array)[0]))
-
 // TODO: Move to ucbuf.h
 U_DEFINE_LOCAL_OPEN_POINTER(LocalUCHARBUFPointer, UCHARBUF, ucbuf_close);
 
@@ -199,6 +197,7 @@ void CollationTest::TestImplicits() {
     // Implicit primary weights should be assigned for the following sets,
     // and sort in ascending order by set and then code point.
     // See http://www.unicode.org/reports/tr10/#Implicit_Weights
+
     // core Han Unified Ideographs
     UnicodeSet coreHan("[\\p{unified_ideograph}&"
                             "[\\p{Block=CJK_Unified_Ideographs}"
@@ -211,6 +210,17 @@ void CollationTest::TestImplicits() {
                         errorCode);
     UnicodeSet unassigned("[[:Cn:][:Cs:][:Co:]]", errorCode);
     unassigned.remove(0xfffe, 0xffff);  // These have special CLDR root mappings.
+
+    // Starting with CLDR 26/ICU 54, the root Han order may instead be
+    // the Unihan radical-stroke order.
+    // The tests should pass either way, so we only test the order of a small set of Han characters
+    // whose radical-stroke order is the same as their code point order.
+    UnicodeSet someHanInCPOrder(
+            "[\\u4E00-\\u4E16\\u4E18-\\u4E2B\\u4E2D-\\u4E3C\\u4E3E-\\u4E48"
+            "\\u4E4A-\\u4E60\\u4E63-\\u4E8F\\u4E91-\\u4F63\\u4F65-\\u50F1\\u50F3-\\u50F6]",
+            errorCode);
+    UnicodeSet inOrder(someHanInCPOrder);
+    inOrder.addAll(unassigned).freeze();
     if(errorCode.logIfFailureAndReset("UnicodeSet")) {
         return;
     }
@@ -218,7 +228,7 @@ void CollationTest::TestImplicits() {
     UChar32 prev = 0;
     uint32_t prevPrimary = 0;
     UTF16CollationIterator ci(cd, FALSE, NULL, NULL, NULL);
-    for(int32_t i = 0; i < LENGTHOF(sets); ++i) {
+    for(int32_t i = 0; i < UPRV_LENGTHOF(sets); ++i) {
         LocalPointer<UnicodeSetIterator> iter(new UnicodeSetIterator(*sets[i]));
         while(iter->next()) {
             UChar32 c = iter->getCodepoint();
@@ -239,7 +249,7 @@ void CollationTest::TestImplicits() {
                 continue;
             }
             uint32_t primary = (uint32_t)(ce >> 32);
-            if(!(primary > prevPrimary)) {
+            if(!(primary > prevPrimary) && inOrder.contains(c) && inOrder.contains(prev)) {
                 errln("CE(U+%04lx)=%04lx.. not greater than CE(U+%04lx)=%04lx..",
                       (long)c, (long)primary, (long)prev, (long)prevPrimary);
             }
@@ -298,7 +308,7 @@ void CollationTest::TestIllegalUTF8() {
     };
 
     StringPiece fffd(strings[0]);
-    for(int32_t i = 1; i < LENGTHOF(strings); ++i) {
+    for(int32_t i = 1; i < UPRV_LENGTHOF(strings); ++i) {
         StringPiece illegal(strings[i]);
         UCollationResult order = coll->compareUTF8(fffd, illegal, errorCode);
         if(order != UCOL_EQUAL) {
@@ -469,7 +479,7 @@ void CollationTest::TestFCD() {
     if(errorCode.logIfFailureAndReset("FCDUTF16CollationIterator constructor")) {
         return;
     }
-    CodePointIterator cpi(cp, LENGTHOF(cp));
+    CodePointIterator cpi(cp, UPRV_LENGTHOF(cp));
     checkFCD("FCDUTF16CollationIterator", u16ci, cpi);
 
 #if U_HAVE_STD_STRING
@@ -486,7 +496,7 @@ void CollationTest::TestFCD() {
 
     cpi.resetToStart();
     UCharIterator iter;
-    uiter_setString(&iter, s, LENGTHOF(s) - 1);  // -1: without the terminating NUL
+    uiter_setString(&iter, s, UPRV_LENGTHOF(s) - 1);  // -1: without the terminating NUL
     FCDUIterCollationIterator uici(data, FALSE, iter, 0);
     if(errorCode.logIfFailureAndReset("FCDUIterCollationIterator constructor")) {
         return;
@@ -865,12 +875,14 @@ void CollationTest::TestTailoredElements() {
         LocalPointer<StringEnumeration> types(
                 Collator::getKeywordValuesForLocale("collation", locale, FALSE, errorCode));
         errorCode.assertSuccess();
-        const char *type = NULL;  // default type
-        do {
-            Locale localeWithType(locale);
-            if(type != NULL) {
-                localeWithType.setKeywordValue("collation", type, errorCode);
+        const char *type;  // first: default type
+        while((type = types->next(NULL, errorCode)) != NULL) {
+            if(strncmp(type, "private-", 8) == 0) {
+                errln("Collator::getKeywordValuesForLocale(%s) returns private collation keyword: %s",
+                        localeID, type);
             }
+            Locale localeWithType(locale);
+            localeWithType.setKeywordValue("collation", type, errorCode);
             errorCode.assertSuccess();
             LocalPointer<Collator> coll(Collator::createInstance(localeWithType, errorCode));
             if(errorCode.logIfFailureAndReset("Collator::createInstance(%s)",
@@ -914,7 +926,7 @@ void CollationTest::TestTailoredElements() {
                     }
                 }
             }
-        } while((type = types->next(NULL, errorCode)) != NULL);
+        }
     } while((localeID = locales->next(NULL, errorCode)) != NULL);
     uhash_close(prevLocales);
 }
@@ -1126,7 +1138,7 @@ void CollationTest::parseAndSetAttribute(IcuTestErrorCode &errorCode) {
 
     UColAttribute attr;
     for(int32_t i = 0;; ++i) {
-        if(i == LENGTHOF(attributes)) {
+        if(i == UPRV_LENGTHOF(attributes)) {
             errln("invalid attribute name on line %d", (int)fileLineNumber);
             infoln(fileLine);
             errorCode.set(U_PARSE_ERROR);
@@ -1140,7 +1152,7 @@ void CollationTest::parseAndSetAttribute(IcuTestErrorCode &errorCode) {
 
     UColAttributeValue value;
     for(int32_t i = 0;; ++i) {
-        if(i == LENGTHOF(attributeValues)) {
+        if(i == UPRV_LENGTHOF(attributeValues)) {
             errln("invalid attribute value name on line %d", (int)fileLineNumber);
             infoln(fileLine);
             errorCode.set(U_PARSE_ERROR);
@@ -1171,11 +1183,15 @@ void CollationTest::parseAndSetReorderCodes(int32_t start, IcuTestErrorCode &err
         CharString name;
         name.appendInvariantChars(fileLine.tempSubStringBetween(start, limit), errorCode);
         int32_t code = CollationRuleParser::getReorderCode(name.data());
-        if(code < -1) {
-            errln("invalid reorder code '%s' on line %d", name.data(), (int)fileLineNumber);
-            infoln(fileLine);
-            errorCode.set(U_PARSE_ERROR);
-            return;
+        if(code < 0) {
+            if(uprv_stricmp(name.data(), "default") == 0) {
+                code = UCOL_REORDER_CODE_DEFAULT;  // -1
+            } else {
+                errln("invalid reorder code '%s' on line %d", name.data(), (int)fileLineNumber);
+                infoln(fileLine);
+                errorCode.set(U_PARSE_ERROR);
+                return;
+            }
         }
         reorderCodes.addElement(code, errorCode);
         start = limit;
@@ -1209,7 +1225,7 @@ void CollationTest::buildTailoring(UCHARBUF *f, IcuTestErrorCode &errorCode) {
         return;
     }
     if(errorCode.isFailure()) {
-        errln("RuleBasedCollator(rules) failed - %s", errorCode.errorName());
+        dataerrln("RuleBasedCollator(rules) failed - %s", errorCode.errorName());
         infoln(UnicodeString("  reason: ") + reason);
         if(parseError.offset >= 0) { infoln("  rules offset: %d", (int)parseError.offset); }
         if(parseError.preContext[0] != 0 || parseError.postContext[0] != 0) {
@@ -1234,16 +1250,17 @@ void CollationTest::setRootCollator(IcuTestErrorCode &errorCode) {
 
 void CollationTest::setLocaleCollator(IcuTestErrorCode &errorCode) {
     if(errorCode.isFailure()) { return; }
-    CharString langTag;
-    langTag.appendInvariantChars(fileLine.tempSubString(9), errorCode);
-    char localeID[ULOC_FULLNAME_CAPACITY];
-    int32_t parsedLength;
-    (void)uloc_forLanguageTag(
-        langTag.data(), localeID, LENGTHOF(localeID), &parsedLength, errorCode);
-    Locale locale(localeID);
-    if(fileLine.length() == 9 ||
-            errorCode.isFailure() || errorCode.get() == U_STRING_NOT_TERMINATED_WARNING ||
-            parsedLength != langTag.length() || locale.isBogus()) {
+    int32_t at = fileLine.indexOf((UChar)0x40, 9);  // @ is not invariant
+    if(at >= 0) {
+        fileLine.setCharAt(at, (UChar)0x2a);  // *
+    }
+    CharString localeID;
+    localeID.appendInvariantChars(fileLine.tempSubString(9), errorCode);
+    if(at >= 0) {
+        localeID.data()[at - 9] = '@';
+    }
+    Locale locale(localeID.data());
+    if(fileLine.length() == 9 || errorCode.isFailure() || locale.isBogus()) {
         errln("invalid language tag on line %d", (int)fileLineNumber);
         infoln(fileLine);
         if(errorCode.isSuccess()) { errorCode.set(U_PARSE_ERROR); }
@@ -1283,7 +1300,7 @@ UBool CollationTest::getSortKeyParts(const UChar *s, int32_t length,
                                      IcuTestErrorCode &errorCode) {
     if(errorCode.isFailure()) { return FALSE; }
     uint8_t part[32];
-    U_ASSERT(partSize <= LENGTHOF(part));
+    U_ASSERT(partSize <= UPRV_LENGTHOF(part));
     UCharIterator iter;
     uiter_setString(&iter, s, length);
     uint32_t state[2] = { 0, 0 };
@@ -1421,7 +1438,7 @@ UBool CollationTest::getCollationKey(const char *norm, const UnicodeString &line
 
     // Check that internalNextSortKeyPart() makes the same key, with several part sizes.
     static const int32_t partSizes[] = { 32, 3, 1 };
-    for(int32_t psi = 0; psi < LENGTHOF(partSizes); ++psi) {
+    for(int32_t psi = 0; psi < UPRV_LENGTHOF(partSizes); ++psi) {
         int32_t partSize = partSizes[psi];
         CharString parts;
         if(!getSortKeyParts(s, length, parts, 32, errorCode)) {
@@ -1712,7 +1729,7 @@ void CollationTest::TestDataDriven() {
     IcuTestErrorCode errorCode(*this, "TestDataDriven");
 
     fcd = Normalizer2Factory::getFCDInstance(errorCode);
-    nfd = Normalizer2Factory::getNFDInstance(errorCode);
+    nfd = Normalizer2::getNFDInstance(errorCode);
     if(errorCode.logDataIfFailureAndReset("Normalizer2Factory::getFCDInstance() or getNFDInstance()")) {
         return;
     }

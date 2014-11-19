@@ -23,13 +23,16 @@
 #include "intltest.h"
 #if !UCONFIG_NO_REGULAR_EXPRESSIONS
 
+#include "unicode/localpointer.h"
 #include "unicode/regex.h"
 #include "unicode/uchar.h"
 #include "unicode/ucnv.h"
 #include "unicode/uniset.h"
 #include "unicode/uregex.h"
+#include "unicode/usetiter.h"
 #include "unicode/ustring.h"
 #include "regextst.h"
+#include "regexcmp.h"
 #include "uvector.h"
 #include "util.h"
 #include <stdlib.h>
@@ -135,7 +138,12 @@ void RegexTest::runIndexedTest( int32_t index, UBool exec, const char* &name, ch
         case 22: name = "Bug10459";
             if (exec) Bug10459();
             break;
-
+        case 23: name = "TestCaseInsensitiveStarters";
+            if (exec) TestCaseInsensitiveStarters();
+            break;
+        case 24: name = "TestBug11049";
+            if (exec) TestBug11049();
+            break;
         default: name = "";
             break; //needed to end loop
     }
@@ -210,8 +218,6 @@ const char* RegexTest::extractToAssertBuf(const UnicodeString& message) {
   ASSERT_BUF[sizeof(ASSERT_BUF)-1] = 0;
   return ASSERT_BUF;
 }
-
-#define LENGTHOF(array) (int32_t)(sizeof(array)/sizeof((array)[0]))
 
 #define REGEX_VERBOSE_TEXT(text) {char buf[200];utextToPrintable(buf,sizeof(buf)/sizeof(buf[0]),text);logln("%s:%d: UText %s=\"%s\"", __FILE__, __LINE__, #text, buf);}
 
@@ -2027,7 +2033,7 @@ void RegexTest::API_Match_UTF8() {
         utext_openUnicodeString(&destText, &dest, &status);
         UText *result;
         //const char str_0123456789[] = { 0x30, 0x31, 0x32, 0x33, 0x34, 0x35, 0x36, 0x37, 0x38, 0x39, 0x00 }; /* 0123456789 */
-        //	Test shallow-clone API
+        //  Test shallow-clone API
         int64_t   group_len;
         result = matcher->group((UText *)NULL, group_len, status);
         REGEX_CHECK_STATUS;
@@ -4818,6 +4824,9 @@ struct progressCallBackContext {
     void reset(int32_t max) {maxCalls=max; numCalls=0;lastIndex=0;};
 };
 
+// call-back function for find().
+// Return TRUE to continue the find().
+// Return FALSE to stop the find().
 U_CDECL_BEGIN
 static UBool U_CALLCONV
 testProgressCallBackFn(const void *context, int64_t matchIndex) {
@@ -4853,7 +4862,7 @@ void RegexTest::FindProgressCallbacks() {
         const void                  *returnedContext;
         URegexFindProgressCallback  *returnedFn;
         UErrorCode status = U_ZERO_ERROR;
-        RegexMatcher matcher(UNICODE_STRING_SIMPLE("((.)+\\2)+x"), 0, status);  // A pattern that can run long.
+        RegexMatcher matcher(UNICODE_STRING_SIMPLE("((.)\\2)x"), 0, status);
         REGEX_CHECK_STATUS;
         matcher.setFindProgressCallback(testProgressCallBackFn, &cbInfo, status);
         REGEX_CHECK_STATUS;
@@ -4862,10 +4871,10 @@ void RegexTest::FindProgressCallbacks() {
         REGEX_ASSERT(returnedFn == testProgressCallBackFn);
         REGEX_ASSERT(returnedContext == &cbInfo);
 
-        // A short-running match should NOT invoke the callback.
+        // A find that matches on the initial position does NOT invoke the callback.
         status = U_ZERO_ERROR;
         cbInfo.reset(100);
-        UnicodeString s = "abxxx";
+        UnicodeString s = "aaxxx";
         matcher.reset(s);
 #if 0
         matcher.setTrace(TRUE);
@@ -4874,7 +4883,8 @@ void RegexTest::FindProgressCallbacks() {
         REGEX_CHECK_STATUS;
         REGEX_ASSERT(cbInfo.numCalls == 0);
 
-        // A medium running match that causes matcher.find() to invoke our callback for each index.
+        // A medium running find() that causes matcher.find() to invoke our callback for each index,
+        //   but not so many times that we interrupt the operation.
         status = U_ZERO_ERROR;
         s = "aaaaaaaaaaaaaaaaaaab";
         cbInfo.reset(s.length()); //  Some upper limit for number of calls that is greater than size of our input string
@@ -4889,22 +4899,21 @@ void RegexTest::FindProgressCallbacks() {
         cbInfo.reset(s1.length() - 5); //  Bail early somewhere near the end of input string
         matcher.reset(s1);
         REGEX_ASSERT(matcher.find(0, status)==FALSE);
-        REGEX_CHECK_STATUS;
+        REGEX_ASSERT(status == U_REGEX_STOPPED_BY_CALLER);
         REGEX_ASSERT(cbInfo.numCalls == s1.length() - 5);
 
-#if 0
         // Now a match that will succeed, but after an interruption
         status = U_ZERO_ERROR;
         UnicodeString s2 = "aaaaaaaaaaaaaa aaaaaaaaab xxx";
         cbInfo.reset(s2.length() - 10); //  Bail early somewhere near the end of input string
         matcher.reset(s2);
         REGEX_ASSERT(matcher.find(0, status)==FALSE);
-        REGEX_CHECK_STATUS;
+        REGEX_ASSERT(status == U_REGEX_STOPPED_BY_CALLER);
         // Now retry the match from where left off
         cbInfo.maxCalls = 100; //  No callback limit
+        status = U_ZERO_ERROR;
         REGEX_ASSERT(matcher.find(cbInfo.lastIndex, status));
         REGEX_CHECK_STATUS;
-#endif
     }
 
 
@@ -5258,7 +5267,7 @@ void RegexTest::Bug10459() {
     //   It should set an U_REGEX_INVALID_STATE.
 
     UChar buf[100];
-    int32_t len = uregex_group(icu_re, 0, buf, LENGTHOF(buf), &status);
+    int32_t len = uregex_group(icu_re, 0, buf, UPRV_LENGTHOF(buf), &status);
     REGEX_ASSERT(status == U_REGEX_INVALID_STATE);
     REGEX_ASSERT(len == 0);
 
@@ -5266,6 +5275,98 @@ void RegexTest::Bug10459() {
     utext_close(utext_pat);
     utext_close(utext_txt);
 }
+
+void RegexTest::TestCaseInsensitiveStarters() {
+    // Test that the data used by RegexCompile::findCaseInsensitiveStarters() hasn't
+    //  become stale because of new Unicode characters.
+    // If it is stale, rerun the generation tool
+    //    svn+ssh://source.icu-project.org/repos/icu/tools/trunk/unicode/c/genregexcasing
+    // and replace the embedded data in i18n/regexcmp.cpp
+
+    for (UChar32 cp=0; cp<=0x10ffff; cp++) {
+        if (!u_hasBinaryProperty(cp, UCHAR_CASE_SENSITIVE)) {
+            continue;
+        }
+        UnicodeSet s(cp, cp);
+        s.closeOver(USET_CASE_INSENSITIVE);
+        UnicodeSetIterator setIter(s);
+        while (setIter.next()) {
+            if (!setIter.isString()) {
+                continue;
+            }
+            const UnicodeString &str = setIter.getString();
+            UChar32 firstChar = str.char32At(0);
+            UnicodeSet starters;
+            RegexCompile::findCaseInsensitiveStarters(firstChar, &starters);
+            if (!starters.contains(cp)) {
+                errln("CaseInsensitiveStarters for \\u%x is missing character \\u%x.", cp, firstChar);
+                return;
+            }
+        }
+    }
+}
+
+
+void RegexTest::TestBug11049() {
+    // Original bug report: pattern with match start consisting of one of several individual characters,
+    //  and the text being matched ending with a supplementary character. find() would read past the
+    //  end of the input text when searching for potential match starting points.
+
+    // To see the problem, the text must exactly fill an allocated buffer, so that valgrind will
+    // detect the bad read.
+
+    TestCase11049("A|B|C", "a string \\ud800\\udc00", FALSE, __LINE__);
+    TestCase11049("A|B|C", "string matches at end C", TRUE, __LINE__);
+
+    // Test again with a pattern starting with a single character,
+    // which takes a different code path than starting with an OR expression,
+    // but with similar logic.
+    TestCase11049("C", "a string \\ud800\\udc00", FALSE, __LINE__);
+    TestCase11049("C", "string matches at end C", TRUE, __LINE__);
+}
+
+// Run a single test case from TestBug11049(). Internal function.
+void RegexTest::TestCase11049(const char *pattern, const char *data, UBool expectMatch, int32_t lineNumber) {
+    UErrorCode status = U_ZERO_ERROR;
+    UnicodeString patternString = UnicodeString(pattern).unescape();
+    LocalPointer<RegexPattern> compiledPat(RegexPattern::compile(patternString, 0, status));
+
+    UnicodeString dataString = UnicodeString(data).unescape();
+    UChar *exactBuffer = new UChar[dataString.length()];
+    dataString.extract(exactBuffer, dataString.length(), status);
+    UText *ut = utext_openUChars(NULL, exactBuffer, dataString.length(), &status);
+
+    LocalPointer<RegexMatcher> matcher(compiledPat->matcher(status));
+    REGEX_CHECK_STATUS;
+    matcher->reset(ut);
+    UBool result = matcher->find();
+    if (result != expectMatch) {
+        errln("File %s, line %d: expected %d, got %d. Pattern = \"%s\", text = \"%s\"",
+              __FILE__, lineNumber, expectMatch, result, pattern, data);
+    }
+
+    // Rerun test with UTF-8 input text. Won't see buffer overreads, but could see
+    //   off-by-one on find() with match at the last code point.
+    //   Size of the original char * data (invariant charset) will be <= than the equivalent UTF-8
+    //   because string.unescape() will only shrink it.
+    char * utf8Buffer = new char[uprv_strlen(data)+1];
+    u_strToUTF8(utf8Buffer, uprv_strlen(data)+1, NULL, dataString.getBuffer(), dataString.length(), &status);
+    REGEX_CHECK_STATUS;
+    ut = utext_openUTF8(ut, utf8Buffer, -1, &status);
+    REGEX_CHECK_STATUS;
+    matcher->reset(ut);
+    result = matcher->find();
+    if (result != expectMatch) {
+        errln("File %s, line %d (UTF-8 check): expected %d, got %d. Pattern = \"%s\", text = \"%s\"",
+              __FILE__, lineNumber, expectMatch, result, pattern, data);
+    }
+    delete [] utf8Buffer;
+
+    utext_close(ut);
+    delete [] exactBuffer;
+}
+
+
 
 #endif  /* !UCONFIG_NO_REGULAR_EXPRESSIONS  */
 

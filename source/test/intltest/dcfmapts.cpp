@@ -22,8 +22,6 @@
 #include "plurrule_impl.h"
 #include <stdio.h>
 
-#define LENGTHOF(array) ((int32_t)(sizeof(array)/sizeof((array)[0])))
-
 // This is an API test, not a unit test.  It doesn't test very many cases, and doesn't
 // try to test the full functionality.  It just calls each function in the class and
 // verifies that it works on a basic level.
@@ -81,6 +79,12 @@ void IntlTestDecimalFormatAPI::runIndexedTest( int32_t index, UBool exec, const 
                TestBadFastpath();
             }
             break;
+         case 7: name = "TestRequiredDecimalPoint";
+            if(exec) {
+               logln((UnicodeString)"TestRequiredDecimalPoint ---");
+               TestRequiredDecimalPoint();
+            }
+            break;
        default: name = ""; break;
     }
 }
@@ -102,6 +106,14 @@ void IntlTestDecimalFormatAPI::testAPI(/*char *par*/)
         errcheckln(status, "ERROR: Could not create DecimalFormat (default) - %s", u_errorName(status));
         return;
     }
+
+    // bug 10864
+    status = U_ZERO_ERROR;
+    DecimalFormat noGrouping("###0.##", status);
+    if (noGrouping.getGroupingSize() != 0) {
+      errln("Grouping size should be 0 for no grouping.");
+    }
+    // end bug 10864
 
     status = U_ZERO_ERROR;
     const UnicodeString pattern("#,##0.# FF");
@@ -566,7 +578,7 @@ void IntlTestDecimalFormatAPI::TestScale()
     UnicodeString percentPattern("#,##0%");
     pat.setMaximumFractionDigits(4);
 
-    for(int32_t i=0; i < LENGTHOF(testData); i++) {
+    for(int32_t i=0; i < UPRV_LENGTHOF(testData); i++) {
         if ( i > 2 ) {
             pat.applyPattern(percentPattern,status);
         }
@@ -817,6 +829,52 @@ void IntlTestDecimalFormatAPI::TestBadFastpath() {
     df->setGroupingUsed(TRUE);
     fmt.remove();
     assertEquals("Format 1234 w/ grouping", "1,234", df->format(1234, fmt));
+}
+
+void IntlTestDecimalFormatAPI::TestRequiredDecimalPoint() {
+    UErrorCode status = U_ZERO_ERROR;
+    UnicodeString text("99");
+    Formattable result1;
+    UnicodeString pat1("##.0000");
+    UnicodeString pat2("00.0");
+
+    LocalPointer<DecimalFormat> df(new DecimalFormat(pat1, status));
+    if (U_FAILURE(status)) {
+        dataerrln("Error creating new DecimalFormat - %s", u_errorName(status));
+        return;
+    }
+
+    status = U_ZERO_ERROR;
+    df->applyPattern(pat1, status);
+    if(U_FAILURE(status)) {
+        errln((UnicodeString)"ERROR: applyPattern() failed");
+    }
+    df->parse(text, result1, status);
+    if(U_FAILURE(status)) {
+        errln((UnicodeString)"ERROR: parse() failed");
+    }
+    df->setDecimalPatternMatchRequired(TRUE);
+    df->parse(text, result1, status);
+    if(U_SUCCESS(status)) {
+        errln((UnicodeString)"ERROR: unexpected parse()");
+    }
+
+
+    status = U_ZERO_ERROR;
+    df->applyPattern(pat2, status);
+    df->setDecimalPatternMatchRequired(FALSE);
+    if(U_FAILURE(status)) {
+        errln((UnicodeString)"ERROR: applyPattern(2) failed");
+    }
+    df->parse(text, result1, status);
+    if(U_FAILURE(status)) {
+        errln((UnicodeString)"ERROR: parse(2) failed - " + u_errorName(status));
+    }
+    df->setDecimalPatternMatchRequired(TRUE);
+    df->parse(text, result1, status);
+    if(U_SUCCESS(status)) {
+        errln((UnicodeString)"ERROR: unexpected parse(2)");
+    }
 }
 
 #endif /* #if !UCONFIG_NO_FORMATTING */

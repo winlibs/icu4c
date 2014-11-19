@@ -233,6 +233,11 @@ public:
 
     void TestParseMultiPatternMatch();
 
+    void TestParseLeniencyAPIs();
+
+    // test override NumberFormat
+    void TestNumberFormatOverride();
+
 private:
     UBool showParse(DateFormat &format, const UnicodeString &formattedString);
 

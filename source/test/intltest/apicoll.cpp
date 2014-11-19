@@ -46,8 +46,6 @@
 #include "cmemory.h"
 #include <stdlib.h>
 
-#define LENGTHOF(array) (int32_t)(sizeof(array)/sizeof((array)[0]))
-
 void
 CollationAPITest::doAssert(UBool condition, const char *message)
 {
@@ -164,7 +162,16 @@ CollationAPITest::TestProperty(/* char* par */)
     delete col; col = 0;
     RuleBasedCollator *rcol = (RuleBasedCollator *)Collator::createInstance("da_DK",
                                                                             success);
-    doAssert(rcol->getRules().length() != 0, "da_DK rules does not have length 0");
+    if (U_FAILURE(success)) {
+        errcheckln(success, "Collator::createInstance(\"da_DK\") failed - %s", u_errorName(success));
+        return;
+    }
+    const UnicodeString &daRules = rcol->getRules();
+    if(daRules.isEmpty()) {
+        dataerrln("missing da_DK tailoring rule string");
+    } else {
+        doAssert(daRules.indexOf("aa") >= 0, "da_DK rules do not contain 'aa'");
+    }
     delete rcol;
 
     col = Collator::createInstance(Locale::getFrench(), success);
@@ -1235,10 +1242,10 @@ void CollationAPITest::TestSortKeyOverflow() {
     // 2 bytes for the Cyrillic i, 1 byte for the primary-compression terminator,
     // 2 bytes for the Greek phi, and 1 byte for the NUL terminator.
     uint8_t sortKey[12];
-    int32_t length = col->getSortKey(i_and_phi, 2, sortKey, LENGTHOF(sortKey));
+    int32_t length = col->getSortKey(i_and_phi, 2, sortKey, UPRV_LENGTHOF(sortKey));
     uint8_t sortKey2[12];
     for (int32_t capacity = 0; capacity < length; ++capacity) {
-        uprv_memset(sortKey2, 2, LENGTHOF(sortKey2));
+        uprv_memset(sortKey2, 2, UPRV_LENGTHOF(sortKey2));
         int32_t length2 = col->getSortKey(i_and_phi, 2, sortKey2, capacity);
         if (length2 != length || 0 != uprv_memcmp(sortKey, sortKey2, capacity)) {
             errln("getSortKey(i_and_phi, capacity=%d) failed to write proper prefix", capacity);
@@ -1654,7 +1661,7 @@ void CollationAPITest::TestGetLocale() {
   u_unescape(rules, rlz, 256);
 
   /* test opening collators for different locales */
-  for(i = 0; i<(int32_t)LENGTHOF(testStruct); i++) {
+  for(i = 0; i<(int32_t)UPRV_LENGTHOF(testStruct); i++) {
     status = U_ZERO_ERROR;
     coll = Collator::createInstance(testStruct[i].requestedLocale, status);
     if(U_FAILURE(status)) {
@@ -1665,11 +1672,13 @@ void CollationAPITest::TestGetLocale() {
     // The requested locale may be the same as the valid locale,
     // or may not be supported at all. See ticket #10477.
     locale = coll->getLocale(ULOC_REQUESTED_LOCALE, status);
-    if(locale != testStruct[i].requestedLocale && locale != testStruct[i].validLocale) {
+    if(U_SUCCESS(status) &&
+        locale != testStruct[i].requestedLocale && locale != testStruct[i].validLocale) {
       errln("[Coll %s]: Error in requested locale, expected %s or %s, got %s",
             testStruct[i].requestedLocale,
             testStruct[i].requestedLocale, testStruct[i].validLocale, locale.getName());
     }
+    status = U_ZERO_ERROR;
     locale = coll->getLocale(ULOC_VALID_LOCALE, status);
     if(locale != testStruct[i].validLocale) {
       errln("[Coll %s]: Error in valid locale, expected %s, got %s",
@@ -1727,9 +1736,10 @@ void CollationAPITest::TestGetLocale() {
   /* collator instantiated from rules should have all three locales NULL */
   coll = new RuleBasedCollator(rlz, status);
   locale = coll->getLocale(ULOC_REQUESTED_LOCALE, status);
-  if(!locale.isBogus()) {
+  if(U_SUCCESS(status) && !locale.isBogus()) {
     errln("For collator instantiated from rules, requested locale %s is not bogus", locale.getName());
   }
+  status = U_ZERO_ERROR;
   locale = coll->getLocale(ULOC_VALID_LOCALE, status);
   if(!locale.isBogus()) {
     errln("For collator instantiated from rules, valid locale %s is not bogus", locale.getName());
@@ -1909,7 +1919,7 @@ void CollationAPITest::TestGetTailoredSet()
   UnicodeString buff; 
   UnicodeSet *set = NULL;
 
-  for(i = 0; i < LENGTHOF(setTest); i++) {
+  for(i = 0; i < UPRV_LENGTHOF(setTest); i++) {
     buff = UnicodeString(setTest[i].rules, -1, US_INV).unescape();
     RuleBasedCollator coll(buff, status);
     if(U_SUCCESS(status)) {
@@ -2360,7 +2370,7 @@ void CollationAPITest::TestCloneBinary() {
     UnicodeString ue = UNICODE_STRING_SIMPLE("ue");
     assertEquals("rbc/primary: u-umlaut==ue", UCOL_EQUAL, rbc->compare(uUmlaut, ue, errorCode));
     uint8_t bin[25000];
-    int32_t binLength = rbc->cloneBinary(bin, LENGTHOF(bin), errorCode);
+    int32_t binLength = rbc->cloneBinary(bin, UPRV_LENGTHOF(bin), errorCode);
     if(errorCode.logDataIfFailureAndReset("rbc->cloneBinary()")) {
         return;
     }
@@ -2374,9 +2384,17 @@ void CollationAPITest::TestCloneBinary() {
     assertEquals("rbc2: u-umlaut==ue", UCOL_EQUAL, rbc2.compare(uUmlaut, ue, errorCode));
     assertTrue("rbc==rbc2", *rbc == rbc2);
     uint8_t bin2[25000];
-    int32_t bin2Length = rbc2.cloneBinary(bin2, LENGTHOF(bin2), errorCode);
+    int32_t bin2Length = rbc2.cloneBinary(bin2, UPRV_LENGTHOF(bin2), errorCode);
     assertEquals("len(rbc binary)==len(rbc2 binary)", binLength, bin2Length);
     assertTrue("rbc binary==rbc2 binary", binLength == bin2Length && memcmp(bin, bin2, binLength) == 0);
+
+    RuleBasedCollator rbc3(bin, -1, rbRoot, errorCode);
+    if(errorCode.logDataIfFailureAndReset("RuleBasedCollator(rbc binary, length<0)")) {
+        return;
+    }
+    assertEquals("rbc3.strength==primary", UCOL_PRIMARY, rbc3.getAttribute(UCOL_STRENGTH, errorCode));
+    assertEquals("rbc3: u-umlaut==ue", UCOL_EQUAL, rbc3.compare(uUmlaut, ue, errorCode));
+    assertTrue("rbc==rbc3", *rbc == rbc3);
 }
 
 void CollationAPITest::TestIterNumeric() {
@@ -2400,6 +2418,53 @@ void CollationAPITest::TestIterNumeric() {
     uiter_setUTF8(&iter72, "\x37\x32", 2);
     UCollationResult result = coll.compare(iter40, iter72, errorCode);
     assertEquals("40<72", (int32_t)UCOL_LESS, (int32_t)result);
+}
+
+void CollationAPITest::TestBadKeywords() {
+    // Test locale IDs with errors.
+    // Valid locale IDs are tested via data-driven tests.
+    UErrorCode errorCode = U_ZERO_ERROR;
+    Locale bogusLocale(Locale::getRoot());
+    bogusLocale.setToBogus();
+    LocalPointer<Collator> coll(Collator::createInstance(bogusLocale, errorCode));
+    if(errorCode != U_ILLEGAL_ARGUMENT_ERROR) {
+        errln("Collator::createInstance(bogus locale) did not fail as expected - %s",
+              u_errorName(errorCode));
+    }
+
+    // Unknown value.
+    const char *localeID = "it-u-ks-xyz";
+    errorCode = U_ZERO_ERROR;
+    coll.adoptInstead(Collator::createInstance(localeID, errorCode));
+    if(errorCode != U_ILLEGAL_ARGUMENT_ERROR) {
+        dataerrln("Collator::createInstance(%s) did not fail as expected - %s",
+              localeID, u_errorName(errorCode));
+    }
+
+    // Unsupported attributes.
+    localeID = "it@colHiraganaQuaternary=true";
+    errorCode = U_ZERO_ERROR;
+    coll.adoptInstead(Collator::createInstance(localeID, errorCode));
+    if(errorCode != U_UNSUPPORTED_ERROR) {
+        if (errorCode == U_FILE_ACCESS_ERROR) {
+            dataerrln("Collator::createInstance(it@colHiraganaQuaternary=true) : %s", u_errorName(errorCode));
+        } else {
+            errln("Collator::createInstance(%s) did not fail as expected - %s",
+                  localeID, u_errorName(errorCode));
+        }
+    }
+
+    localeID = "it-u-vt-u24";
+    errorCode = U_ZERO_ERROR;
+    coll.adoptInstead(Collator::createInstance(localeID, errorCode));
+    if(errorCode != U_UNSUPPORTED_ERROR) {
+        if (errorCode == U_ILLEGAL_ARGUMENT_ERROR || errorCode == U_FILE_ACCESS_ERROR) {
+            dataerrln("Collator::createInstance(it-u-vt-u24) : %s", u_errorName(errorCode));
+        } else {
+           errln("Collator::createInstance(%s) did not fail as expected - %s",
+                  localeID, u_errorName(errorCode));
+        }
+    }
 }
 
  void CollationAPITest::dump(UnicodeString msg, RuleBasedCollator* c, UErrorCode& status) {
@@ -2442,6 +2507,7 @@ void CollationAPITest::runIndexedTest( int32_t index, UBool exec, const char* &n
     TESTCASE_AUTO(TestClone);
     TESTCASE_AUTO(TestCloneBinary);
     TESTCASE_AUTO(TestIterNumeric);
+    TESTCASE_AUTO(TestBadKeywords);
     TESTCASE_AUTO_END;
 }
 

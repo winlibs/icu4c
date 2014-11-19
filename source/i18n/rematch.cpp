@@ -1,6 +1,6 @@
 /*
 **************************************************************************
-*   Copyright (C) 2002-2013 International Business Machines Corporation  *
+*   Copyright (C) 2002-2014 International Business Machines Corporation  *
 *   and others. All rights reserved.                                     *
 **************************************************************************
 */
@@ -32,26 +32,6 @@
 #include "ucase.h"
 
 // #include <malloc.h>        // Needed for heapcheck testing
-
-
-// Find progress callback
-// ----------------------
-// Macro to inline test & call to ReportFindProgress().  Eliminates unnecessary function call.
-//
-#define REGEXFINDPROGRESS_INTERRUPT(pos, status)     \
-    (fFindProgressCallbackFn != NULL) && (ReportFindProgress(pos, status) == FALSE)
-
-
-// Smart Backtracking
-// ------------------
-// When a failure would go back to a LOOP_C instruction,
-// strings, characters, and setrefs scan backwards for a valid start
-// character themselves, pop the stack, and save state, emulating the
-// LOOP_C's effect but assured that the next character of input is a
-// possible matching character.
-//
-// Good idea in theory; unfortunately it only helps out a few specific
-// cases and slows the engine down a little in the rest.
 
 U_NAMESPACE_BEGIN
 
@@ -577,6 +557,23 @@ int32_t RegexMatcher::end(int32_t group, UErrorCode &err) const {
     return (int32_t)end64(group, err);
 }
 
+//--------------------------------------------------------------------------------
+//
+//   findProgressInterrupt  This function is called once for each advance in the target
+//                          string from the find() function, and calls the user progress callback
+//                          function if there is one installed.
+//
+//         Return:  TRUE if the find operation is to be terminated.
+//                  FALSE if the find operation is to continue running.
+//
+//--------------------------------------------------------------------------------
+UBool RegexMatcher::findProgressInterrupt(int64_t pos, UErrorCode &status) {
+    if (fFindProgressCallbackFn && !(*fFindProgressCallbackFn)(fFindProgressCallbackContext, pos)) {
+        status = U_REGEX_STOPPED_BY_CALLER;
+        return TRUE;
+    }
+    return FALSE;
+}
 
 //--------------------------------------------------------------------------------
 //
@@ -584,15 +581,33 @@ int32_t RegexMatcher::end(int32_t group, UErrorCode &err) const {
 //
 //--------------------------------------------------------------------------------
 UBool RegexMatcher::find() {
+    if (U_FAILURE(fDeferredStatus)) {
+        return FALSE;
+    }
+    UErrorCode status = U_ZERO_ERROR;
+    UBool result = find(status);
+    return result;
+}
+
+//--------------------------------------------------------------------------------
+//
+//   find()
+//
+//--------------------------------------------------------------------------------
+UBool RegexMatcher::find(UErrorCode &status) {
     // Start at the position of the last match end.  (Will be zero if the
     //   matcher has been reset.)
     //
+    if (U_FAILURE(status)) {
+        return FALSE;
+    }
     if (U_FAILURE(fDeferredStatus)) {
+        status = fDeferredStatus;
         return FALSE;
     }
 
     if (UTEXT_FULL_TEXT_IN_CHUNK(fInputText, fInputLength)) {
-        return findUsingChunk();
+        return findUsingChunk(status);
     }
 
     int64_t startPos = fMatchEnd;
@@ -640,9 +655,9 @@ UBool RegexMatcher::find() {
             return FALSE;
         }
     } else {
-        // For now, let the matcher discover that it can't match on its own
-        // We don't know how long the match len is in native characters
-        testStartLimit = fActiveLimit;
+        // We don't know exactly how long the minimum match length is in native characters.
+        // Treat anything > 0 as 1.
+        testStartLimit = fActiveLimit - (fPattern->fMinMatchLen > 0 ? 1 : 0);
     }
 
     UChar32  c;
@@ -653,8 +668,8 @@ UBool RegexMatcher::find() {
         // No optimization was found.
         //  Try a match at each input position.
         for (;;) {
-            MatchAt(startPos, FALSE, fDeferredStatus);
-            if (U_FAILURE(fDeferredStatus)) {
+            MatchAt(startPos, FALSE, status);
+            if (U_FAILURE(status)) {
                 return FALSE;
             }
             if (fMatch) {
@@ -670,7 +685,7 @@ UBool RegexMatcher::find() {
             // Note that it's perfectly OK for a pattern to have a zero-length
             //   match at the end of a string, so we must make sure that the loop
             //   runs with startPos == testStartLimit the last time through.
-            if  (REGEXFINDPROGRESS_INTERRUPT(startPos, fDeferredStatus))
+            if  (findProgressInterrupt(startPos, status))
                 return FALSE;
         }
         U_ASSERT(FALSE);
@@ -682,8 +697,8 @@ UBool RegexMatcher::find() {
             fMatch = FALSE;
             return FALSE;
         }
-        MatchAt(startPos, FALSE, fDeferredStatus);
-        if (U_FAILURE(fDeferredStatus)) {
+        MatchAt(startPos, FALSE, status);
+        if (U_FAILURE(status)) {
             return FALSE;
         }
         return fMatch;
@@ -693,18 +708,18 @@ UBool RegexMatcher::find() {
         {
             // Match may start on any char from a pre-computed set.
             U_ASSERT(fPattern->fMinMatchLen > 0);
-            int64_t pos;
             UTEXT_SETNATIVEINDEX(fInputText, startPos);
             for (;;) {
+                int64_t pos = startPos;
                 c = UTEXT_NEXT32(fInputText);
-                pos = UTEXT_GETNATIVEINDEX(fInputText);
+                startPos = UTEXT_GETNATIVEINDEX(fInputText);
                 // c will be -1 (U_SENTINEL) at end of text, in which case we
                 // skip this next block (so we don't have a negative array index)
                 // and handle end of text in the following block.
                 if (c >= 0 && ((c<256 && fPattern->fInitialChars8->contains(c)) ||
                               (c>=256 && fPattern->fInitialChars->contains(c)))) {
-                    MatchAt(startPos, FALSE, fDeferredStatus);
-                    if (U_FAILURE(fDeferredStatus)) {
+                    MatchAt(pos, FALSE, status);
+                    if (U_FAILURE(status)) {
                         return FALSE;
                     }
                     if (fMatch) {
@@ -712,13 +727,12 @@ UBool RegexMatcher::find() {
                     }
                     UTEXT_SETNATIVEINDEX(fInputText, pos);
                 }
-                if (startPos >= testStartLimit) {
+                if (startPos > testStartLimit) {
                     fMatch = FALSE;
                     fHitEnd = TRUE;
                     return FALSE;
                 }
-                startPos = pos;
-	            if  (REGEXFINDPROGRESS_INTERRUPT(startPos, fDeferredStatus))
+                if  (findProgressInterrupt(startPos, status))
                     return FALSE;
             }
         }
@@ -730,14 +744,14 @@ UBool RegexMatcher::find() {
             // Match starts on exactly one char.
             U_ASSERT(fPattern->fMinMatchLen > 0);
             UChar32 theChar = fPattern->fInitialChar;
-            int64_t pos;
             UTEXT_SETNATIVEINDEX(fInputText, startPos);
             for (;;) {
+                int64_t pos = startPos;
                 c = UTEXT_NEXT32(fInputText);
-                pos = UTEXT_GETNATIVEINDEX(fInputText);
+                startPos = UTEXT_GETNATIVEINDEX(fInputText);
                 if (c == theChar) {
-                    MatchAt(startPos, FALSE, fDeferredStatus);
-                    if (U_FAILURE(fDeferredStatus)) {
+                    MatchAt(pos, FALSE, status);
+                    if (U_FAILURE(status)) {
                         return FALSE;
                     }
                     if (fMatch) {
@@ -745,13 +759,12 @@ UBool RegexMatcher::find() {
                     }
                     UTEXT_SETNATIVEINDEX(fInputText, pos);
                 }
-                if (startPos >= testStartLimit) {
+                if (startPos > testStartLimit) {
                     fMatch = FALSE;
                     fHitEnd = TRUE;
                     return FALSE;
                 }
-                startPos = pos;
-	            if  (REGEXFINDPROGRESS_INTERRUPT(startPos, fDeferredStatus))
+                if  (findProgressInterrupt(startPos, status))
                     return FALSE;
            }
         }
@@ -761,8 +774,8 @@ UBool RegexMatcher::find() {
         {
             UChar32  c;
             if (startPos == fAnchorStart) {
-                MatchAt(startPos, FALSE, fDeferredStatus);
-                if (U_FAILURE(fDeferredStatus)) {
+                MatchAt(startPos, FALSE, status);
+                if (U_FAILURE(status)) {
                     return FALSE;
                 }
                 if (fMatch) {
@@ -780,8 +793,8 @@ UBool RegexMatcher::find() {
             if (fPattern->fFlags & UREGEX_UNIX_LINES) {
                 for (;;) {
                     if (c == 0x0a) {
-                            MatchAt(startPos, FALSE, fDeferredStatus);
-                            if (U_FAILURE(fDeferredStatus)) {
+                            MatchAt(startPos, FALSE, status);
+                            if (U_FAILURE(status)) {
                                 return FALSE;
                             }
                             if (fMatch) {
@@ -799,7 +812,7 @@ UBool RegexMatcher::find() {
                     // Note that it's perfectly OK for a pattern to have a zero-length
                     //   match at the end of a string, so we must make sure that the loop
                     //   runs with startPos == testStartLimit the last time through.
-		            if  (REGEXFINDPROGRESS_INTERRUPT(startPos, fDeferredStatus))
+                    if  (findProgressInterrupt(startPos, status))
                         return FALSE;
                 }
             } else {
@@ -810,8 +823,8 @@ UBool RegexMatcher::find() {
                                 (void)UTEXT_NEXT32(fInputText);
                                 startPos = UTEXT_GETNATIVEINDEX(fInputText);
                             }
-                            MatchAt(startPos, FALSE, fDeferredStatus);
-                            if (U_FAILURE(fDeferredStatus)) {
+                            MatchAt(startPos, FALSE, status);
+                            if (U_FAILURE(status)) {
                                 return FALSE;
                             }
                             if (fMatch) {
@@ -829,7 +842,7 @@ UBool RegexMatcher::find() {
                     // Note that it's perfectly OK for a pattern to have a zero-length
                     //   match at the end of a string, so we must make sure that the loop
                     //   runs with startPos == testStartLimit the last time through.
-		            if  (REGEXFINDPROGRESS_INTERRUPT(startPos, fDeferredStatus))
+                    if  (findProgressInterrupt(startPos, status))
                         return FALSE;
                 }
             }
@@ -866,7 +879,7 @@ UBool RegexMatcher::find(int64_t start, UErrorCode &status) {
         return FALSE;
     }
     fMatchEnd = nativeStart;
-    return find();
+    return find(status);
 }
 
 
@@ -876,7 +889,7 @@ UBool RegexMatcher::find(int64_t start, UErrorCode &status) {
 //                       entire string is available in the UText's chunk buffer.
 //
 //--------------------------------------------------------------------------------
-UBool RegexMatcher::findUsingChunk() {
+UBool RegexMatcher::findUsingChunk(UErrorCode &status) {
     // Start at the position of the last match end.  (Will be zero if the
     //   matcher has been reset.
     //
@@ -917,6 +930,7 @@ UBool RegexMatcher::findUsingChunk() {
     //   the minimum length match would extend past the end of the input.
     //   Note:  some patterns that cannot match anything will have fMinMatchLength==Max Int.
     //          Be aware of possible overflows if making changes here.
+    //   Note:  a match can begin at inputBuf + testLen; it is an inclusive limit.
     int32_t testLen  = (int32_t)(fActiveLimit - fPattern->fMinMatchLen);
     if (startPos > testLen) {
         fMatch = FALSE;
@@ -932,8 +946,8 @@ UBool RegexMatcher::findUsingChunk() {
         // No optimization was found.
         //  Try a match at each input position.
         for (;;) {
-            MatchChunkAt(startPos, FALSE, fDeferredStatus);
-            if (U_FAILURE(fDeferredStatus)) {
+            MatchChunkAt(startPos, FALSE, status);
+            if (U_FAILURE(status)) {
                 return FALSE;
             }
             if (fMatch) {
@@ -947,7 +961,7 @@ UBool RegexMatcher::findUsingChunk() {
             // Note that it's perfectly OK for a pattern to have a zero-length
             //   match at the end of a string, so we must make sure that the loop
             //   runs with startPos == testLen the last time through.
-            if  (REGEXFINDPROGRESS_INTERRUPT(startPos, fDeferredStatus))
+            if  (findProgressInterrupt(startPos, status))
                 return FALSE;
         }
         U_ASSERT(FALSE);
@@ -959,8 +973,8 @@ UBool RegexMatcher::findUsingChunk() {
             fMatch = FALSE;
             return FALSE;
         }
-        MatchChunkAt(startPos, FALSE, fDeferredStatus);
-        if (U_FAILURE(fDeferredStatus)) {
+        MatchChunkAt(startPos, FALSE, status);
+        if (U_FAILURE(status)) {
             return FALSE;
         }
         return fMatch;
@@ -975,20 +989,20 @@ UBool RegexMatcher::findUsingChunk() {
             U16_NEXT(inputBuf, startPos, fActiveLimit, c);  // like c = inputBuf[startPos++];
             if ((c<256 && fPattern->fInitialChars8->contains(c)) ||
                 (c>=256 && fPattern->fInitialChars->contains(c))) {
-                MatchChunkAt(pos, FALSE, fDeferredStatus);
-                if (U_FAILURE(fDeferredStatus)) {
+                MatchChunkAt(pos, FALSE, status);
+                if (U_FAILURE(status)) {
                     return FALSE;
                 }
                 if (fMatch) {
                     return TRUE;
                 }
             }
-            if (pos >= testLen) {
+            if (startPos > testLen) {
                 fMatch = FALSE;
                 fHitEnd = TRUE;
                 return FALSE;
             }
-            if  (REGEXFINDPROGRESS_INTERRUPT(startPos, fDeferredStatus))
+            if  (findProgressInterrupt(startPos, status))
                 return FALSE;
         }
     }
@@ -1004,31 +1018,31 @@ UBool RegexMatcher::findUsingChunk() {
             int32_t pos = startPos;
             U16_NEXT(inputBuf, startPos, fActiveLimit, c);  // like c = inputBuf[startPos++];
             if (c == theChar) {
-                MatchChunkAt(pos, FALSE, fDeferredStatus);
-                if (U_FAILURE(fDeferredStatus)) {
+                MatchChunkAt(pos, FALSE, status);
+                if (U_FAILURE(status)) {
                     return FALSE;
                 }
                 if (fMatch) {
                     return TRUE;
                 }
             }
-            if (pos >= testLen) {
+            if (startPos > testLen) {
                 fMatch = FALSE;
                 fHitEnd = TRUE;
                 return FALSE;
             }
-            if  (REGEXFINDPROGRESS_INTERRUPT(startPos, fDeferredStatus))
+            if  (findProgressInterrupt(startPos, status))
                 return FALSE;
         }
     }
-        U_ASSERT(FALSE);
+    U_ASSERT(FALSE);
 
     case START_LINE:
     {
         UChar32  c;
         if (startPos == fAnchorStart) {
-            MatchChunkAt(startPos, FALSE, fDeferredStatus);
-            if (U_FAILURE(fDeferredStatus)) {
+            MatchChunkAt(startPos, FALSE, status);
+            if (U_FAILURE(status)) {
                 return FALSE;
             }
             if (fMatch) {
@@ -1041,8 +1055,8 @@ UBool RegexMatcher::findUsingChunk() {
             for (;;) {
                 c = inputBuf[startPos-1];
                 if (c == 0x0a) {
-                    MatchChunkAt(startPos, FALSE, fDeferredStatus);
-                    if (U_FAILURE(fDeferredStatus)) {
+                    MatchChunkAt(startPos, FALSE, status);
+                    if (U_FAILURE(status)) {
                         return FALSE;
                     }
                     if (fMatch) {
@@ -1058,7 +1072,7 @@ UBool RegexMatcher::findUsingChunk() {
                 // Note that it's perfectly OK for a pattern to have a zero-length
                 //   match at the end of a string, so we must make sure that the loop
                 //   runs with startPos == testLen the last time through.
-	            if  (REGEXFINDPROGRESS_INTERRUPT(startPos, fDeferredStatus))
+                if  (findProgressInterrupt(startPos, status))
                     return FALSE;
             }
         } else {
@@ -1069,8 +1083,8 @@ UBool RegexMatcher::findUsingChunk() {
                     if (c == 0x0d && startPos < fActiveLimit && inputBuf[startPos] == 0x0a) {
                         startPos++;
                     }
-                    MatchChunkAt(startPos, FALSE, fDeferredStatus);
-                    if (U_FAILURE(fDeferredStatus)) {
+                    MatchChunkAt(startPos, FALSE, status);
+                    if (U_FAILURE(status)) {
                         return FALSE;
                     }
                     if (fMatch) {
@@ -1086,7 +1100,7 @@ UBool RegexMatcher::findUsingChunk() {
                 // Note that it's perfectly OK for a pattern to have a zero-length
                 //   match at the end of a string, so we must make sure that the loop
                 //   runs with startPos == testLen the last time through.
-	            if  (REGEXFINDPROGRESS_INTERRUPT(startPos, fDeferredStatus))
+                if  (findProgressInterrupt(startPos, status))
                     return FALSE;
             }
         }
@@ -1173,8 +1187,8 @@ UnicodeString RegexMatcher::group(int32_t groupNum, UErrorCode &status) const {
 
 
 //  Return deep (mutable) clone
-//		Technology Preview (as an API), but note that the UnicodeString API is implemented
-//		using this function.
+//      Technology Preview (as an API), but note that the UnicodeString API is implemented
+//      using this function.
 UText *RegexMatcher::group(int32_t groupNum, UText *dest, UErrorCode &status) const {
     if (U_FAILURE(status)) {
         return dest;
@@ -2622,29 +2636,6 @@ void RegexMatcher::IncrementTime(UErrorCode &status) {
     if (fTimeLimit > 0 && fTime >= fTimeLimit) {
         status = U_REGEX_TIME_OUT;
     }
-}
-
-//--------------------------------------------------------------------------------
-//
-//   ReportFindProgress     This function is called once for each advance in the target
-//                          string from the find() function, and calls the user progress callback
-//                          function if there is one installed.
-//
-//                          NOTE:
-//
-//                          If the match operation needs to be aborted because the user
-//                          callback asked for it, just set an error status.
-//                          The engine will pick that up and stop in its outer loop.
-//
-//--------------------------------------------------------------------------------
-UBool RegexMatcher::ReportFindProgress(int64_t matchIndex, UErrorCode &status) {
-    if (fFindProgressCallbackFn != NULL) {
-        if ((*fFindProgressCallbackFn)(fFindProgressCallbackContext, matchIndex) == FALSE) {
-            status = U_ZERO_ERROR /*U_REGEX_STOPPED_BY_CALLER*/;
-            return FALSE;
-        }
-    }
-    return TRUE;
 }
 
 //--------------------------------------------------------------------------------

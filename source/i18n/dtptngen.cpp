@@ -26,7 +26,6 @@
 #include "unicode/ustring.h"
 #include "unicode/rep.h"
 #include "cpputils.h"
-#include "ucln_in.h"
 #include "mutex.h"
 #include "cmemory.h"
 #include "cstring.h"
@@ -35,8 +34,6 @@
 #include "hash.h"
 #include "uresimp.h"
 #include "dtptngen_impl.h"
-
-#define LENGTHOF(array) (int32_t)(sizeof(array)/sizeof((array)[0]))
 
 #if U_CHARSET_FAMILY==U_EBCDIC_FAMILY
 /**
@@ -511,7 +508,7 @@ DateTimePatternGenerator::addCLDRData(const Locale& locale, UErrorCode& err) {
     const char *key=NULL;
     int32_t i;
 
-    UnicodeString defaultItemFormat(TRUE, UDATPG_ItemFormat, LENGTHOF(UDATPG_ItemFormat)-1);  // Read-only alias.
+    UnicodeString defaultItemFormat(TRUE, UDATPG_ItemFormat, UPRV_LENGTHOF(UDATPG_ItemFormat)-1);  // Read-only alias.
 
     err = U_ZERO_ERROR;
     
