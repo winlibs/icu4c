@@ -861,7 +861,7 @@ void TimeZoneTest::TestShortZoneIDs()
         {"ECT", 60, TRUE},    // ICU Link - Europe/Paris
         {"MET", 60, TRUE},    // Olson europe 1:00 C-Eur
         {"CAT", 120, FALSE},  // ICU Link - Africa/Maputo
-        {"ART", 120, TRUE},   // ICU Link - Africa/Cairo
+        {"ART", 120, FALSE},  // ICU Link - Africa/Cairo
         {"EET", 120, TRUE},   // Olson europe 2:00 EU
         {"EAT", 180, FALSE},  // ICU Link - Africa/Addis_Ababa
         {"NET", 240, FALSE},  // ICU Link - Asia/Yerevan
@@ -2031,6 +2031,7 @@ void TimeZoneTest::TestCanonicalID() {
         {"America/St_Lucia", "America/Port_of_Spain"},
         {"America/St_Thomas", "America/Port_of_Spain"},
         {"America/St_Vincent", "America/Port_of_Spain"},
+        {"America/Toronto", "America/Montreal"},
         {"America/Tortola", "America/Port_of_Spain"},
         {"America/Virgin", "America/Port_of_Spain"},
         {"Antarctica/South_Pole", "Antarctica/McMurdo"},
