@@ -1,3 +1,5 @@
+// © 2016 and later: Unicode, Inc. and others.
+// License & terms of use: http://www.unicode.org/copyright.html
 /*
 *******************************************************************************
 * Copyright (C) 1997-2016, International Business Machines Corporation and    *
@@ -46,14 +48,15 @@
 #include "unicode/simpletz.h"
 #include "unicode/rbtz.h"
 #include "unicode/tzfmt.h"
+#include "unicode/ucasemap.h"
 #include "unicode/utf16.h"
 #include "unicode/vtzone.h"
 #include "unicode/udisplaycontext.h"
 #include "unicode/brkiter.h"
+#include "uresimp.h"
 #include "olsontz.h"
 #include "patternprops.h"
 #include "fphdlimp.h"
-#include "gregoimp.h"
 #include "hebrwcal.h"
 #include "cstring.h"
 #include "uassert.h"
@@ -62,11 +65,13 @@
 #include <float.h>
 #include "smpdtfst.h"
 #include "sharednumberformat.h"
+#include "ucasemap_imp.h"
 #include "ustr_imp.h"
 #include "charstr.h"
 #include "uvector.h"
 #include "cstr.h"
 #include "dayperiodrules.h"
+#include "tznames_impl.h"   // ZONE_NAME_U16_MAX
 
 #if defined( U_DEBUG_CALSVC ) || defined (U_DEBUG_CAL)
 #include <stdio.h>
@@ -164,9 +169,6 @@ static const UChar SUPPRESS_NEGATIVE_PREFIX[] = {0xAB00, 0};
  * These are the tags we expect to see in normal resource bundle files associated
  * with a locale.
  */
-static const char gDateTimePatternsTag[]="DateTimePatterns";
-
-//static const UChar gEtcUTC[] = {0x45, 0x74, 0x63, 0x2F, 0x55, 0x54, 0x43, 0x00}; // "Etc/UTC"
 static const UChar QUOTE = 0x27; // Single quote
 
 /*
@@ -702,20 +704,42 @@ void SimpleDateFormat::construct(EStyle timeStyle,
     initializeCalendar(NULL, locale, status);
     if (U_FAILURE(status)) return;
 
-    CalendarData calData(locale, fCalendar?fCalendar->getType():NULL, status);
-    UResourceBundle *dateTimePatterns = calData.getByKey(gDateTimePatternsTag, status);
-    UResourceBundle *currentBundle;
-
+    // Load date time patterns directly from resources.
+    const char* cType = fCalendar ? fCalendar->getType() : NULL;
+    LocalUResourceBundlePointer bundle(ures_open(NULL, locale.getBaseName(), &status));
     if (U_FAILURE(status)) return;
 
-    if (ures_getSize(dateTimePatterns) <= kDateTime)
+    UBool cTypeIsGregorian = TRUE;
+    LocalUResourceBundlePointer dateTimePatterns;
+    if (cType != NULL && uprv_strcmp(cType, "gregorian") != 0) {
+        CharString resourcePath("calendar/", status);
+        resourcePath.append(cType, status).append("/DateTimePatterns", status);
+        dateTimePatterns.adoptInstead(
+            ures_getByKeyWithFallback(bundle.getAlias(), resourcePath.data(),
+                                      (UResourceBundle*)NULL, &status));
+        cTypeIsGregorian = FALSE;
+    }
+
+    // Check for "gregorian" fallback.
+    if (cTypeIsGregorian || status == U_MISSING_RESOURCE_ERROR) {
+        status = U_ZERO_ERROR;
+        dateTimePatterns.adoptInstead(
+            ures_getByKeyWithFallback(bundle.getAlias(),
+                                      "calendar/gregorian/DateTimePatterns",
+                                      (UResourceBundle*)NULL, &status));
+    }
+    if (U_FAILURE(status)) return;
+
+    LocalUResourceBundlePointer currentBundle;
+
+    if (ures_getSize(dateTimePatterns.getAlias()) <= kDateTime)
     {
         status = U_INVALID_FORMAT_ERROR;
         return;
     }
 
-    setLocaleIDs(ures_getLocaleByType(dateTimePatterns, ULOC_VALID_LOCALE, &status),
-                 ures_getLocaleByType(dateTimePatterns, ULOC_ACTUAL_LOCALE, &status));
+    setLocaleIDs(ures_getLocaleByType(dateTimePatterns.getAlias(), ULOC_VALID_LOCALE, &status),
+                 ures_getLocaleByType(dateTimePatterns.getAlias(), ULOC_ACTUAL_LOCALE, &status));
 
     // create a symbols object from the locale
     fSymbols = DateFormatSymbols::createForLocale(locale, status);
@@ -736,66 +760,64 @@ void SimpleDateFormat::construct(EStyle timeStyle,
     // and time pattern strings.
     if ((timeStyle != kNone) && (dateStyle != kNone))
     {
-        currentBundle = ures_getByIndex(dateTimePatterns, (int32_t)timeStyle, NULL, &status);
+        currentBundle.adoptInstead(
+                ures_getByIndex(dateTimePatterns.getAlias(), (int32_t)timeStyle, NULL, &status));
         if (U_FAILURE(status)) {
            status = U_INVALID_FORMAT_ERROR;
            return;
         }
-        switch (ures_getType(currentBundle)) {
+        switch (ures_getType(currentBundle.getAlias())) {
             case URES_STRING: {
-               resStr = ures_getString(currentBundle, &resStrLen, &status);
+               resStr = ures_getString(currentBundle.getAlias(), &resStrLen, &status);
                break;
             }
             case URES_ARRAY: {
-               resStr = ures_getStringByIndex(currentBundle, 0, &resStrLen, &status);
-               ovrStr = ures_getStringByIndex(currentBundle, 1, &ovrStrLen, &status);
+               resStr = ures_getStringByIndex(currentBundle.getAlias(), 0, &resStrLen, &status);
+               ovrStr = ures_getStringByIndex(currentBundle.getAlias(), 1, &ovrStrLen, &status);
                fTimeOverride.setTo(TRUE, ovrStr, ovrStrLen);
                break;
             }
             default: {
                status = U_INVALID_FORMAT_ERROR;
-               ures_close(currentBundle);
                return;
             }
         }
-        ures_close(currentBundle);
 
         UnicodeString tempus1(TRUE, resStr, resStrLen);
 
-        currentBundle = ures_getByIndex(dateTimePatterns, (int32_t)dateStyle, NULL, &status);
+        currentBundle.adoptInstead(
+                ures_getByIndex(dateTimePatterns.getAlias(), (int32_t)dateStyle, NULL, &status));
         if (U_FAILURE(status)) {
            status = U_INVALID_FORMAT_ERROR;
            return;
         }
-        switch (ures_getType(currentBundle)) {
+        switch (ures_getType(currentBundle.getAlias())) {
             case URES_STRING: {
-               resStr = ures_getString(currentBundle, &resStrLen, &status);
+               resStr = ures_getString(currentBundle.getAlias(), &resStrLen, &status);
                break;
             }
             case URES_ARRAY: {
-               resStr = ures_getStringByIndex(currentBundle, 0, &resStrLen, &status);
-               ovrStr = ures_getStringByIndex(currentBundle, 1, &ovrStrLen, &status);
+               resStr = ures_getStringByIndex(currentBundle.getAlias(), 0, &resStrLen, &status);
+               ovrStr = ures_getStringByIndex(currentBundle.getAlias(), 1, &ovrStrLen, &status);
                fDateOverride.setTo(TRUE, ovrStr, ovrStrLen);
                break;
             }
             default: {
                status = U_INVALID_FORMAT_ERROR;
-               ures_close(currentBundle);
                return;
             }
         }
-        ures_close(currentBundle);
 
         UnicodeString tempus2(TRUE, resStr, resStrLen);
 
         int32_t glueIndex = kDateTime;
-        int32_t patternsSize = ures_getSize(dateTimePatterns);
+        int32_t patternsSize = ures_getSize(dateTimePatterns.getAlias());
         if (patternsSize >= (kDateTimeOffset + kShort + 1)) {
             // Get proper date time format
             glueIndex = (int32_t)(kDateTimeOffset + (dateStyle - kDateOffset));
         }
 
-        resStr = ures_getStringByIndex(dateTimePatterns, glueIndex, &resStrLen, &status);
+        resStr = ures_getStringByIndex(dateTimePatterns.getAlias(), glueIndex, &resStrLen, &status);
         SimpleFormatter(UnicodeString(TRUE, resStr, resStrLen), 2, 2, status).
                 format(tempus1, tempus2, fPattern, status);
     }
@@ -803,56 +825,54 @@ void SimpleDateFormat::construct(EStyle timeStyle,
     // pattern string from the resources
     // setTo() - see DateFormatSymbols::assignArray comments
     else if (timeStyle != kNone) {
-        currentBundle = ures_getByIndex(dateTimePatterns, (int32_t)timeStyle, NULL, &status);
+        currentBundle.adoptInstead(
+                ures_getByIndex(dateTimePatterns.getAlias(), (int32_t)timeStyle, NULL, &status));
         if (U_FAILURE(status)) {
            status = U_INVALID_FORMAT_ERROR;
            return;
         }
-        switch (ures_getType(currentBundle)) {
+        switch (ures_getType(currentBundle.getAlias())) {
             case URES_STRING: {
-               resStr = ures_getString(currentBundle, &resStrLen, &status);
+               resStr = ures_getString(currentBundle.getAlias(), &resStrLen, &status);
                break;
             }
             case URES_ARRAY: {
-               resStr = ures_getStringByIndex(currentBundle, 0, &resStrLen, &status);
-               ovrStr = ures_getStringByIndex(currentBundle, 1, &ovrStrLen, &status);
+               resStr = ures_getStringByIndex(currentBundle.getAlias(), 0, &resStrLen, &status);
+               ovrStr = ures_getStringByIndex(currentBundle.getAlias(), 1, &ovrStrLen, &status);
                fDateOverride.setTo(TRUE, ovrStr, ovrStrLen);
                break;
             }
             default: {
                status = U_INVALID_FORMAT_ERROR;
-                ures_close(currentBundle);
                return;
             }
         }
         fPattern.setTo(TRUE, resStr, resStrLen);
-        ures_close(currentBundle);
     }
     else if (dateStyle != kNone) {
-        currentBundle = ures_getByIndex(dateTimePatterns, (int32_t)dateStyle, NULL, &status);
+        currentBundle.adoptInstead(
+                ures_getByIndex(dateTimePatterns.getAlias(), (int32_t)dateStyle, NULL, &status));
         if (U_FAILURE(status)) {
            status = U_INVALID_FORMAT_ERROR;
            return;
         }
-        switch (ures_getType(currentBundle)) {
+        switch (ures_getType(currentBundle.getAlias())) {
             case URES_STRING: {
-               resStr = ures_getString(currentBundle, &resStrLen, &status);
+               resStr = ures_getString(currentBundle.getAlias(), &resStrLen, &status);
                break;
             }
             case URES_ARRAY: {
-               resStr = ures_getStringByIndex(currentBundle, 0, &resStrLen, &status);
-               ovrStr = ures_getStringByIndex(currentBundle, 1, &ovrStrLen, &status);
+               resStr = ures_getStringByIndex(currentBundle.getAlias(), 0, &resStrLen, &status);
+               ovrStr = ures_getStringByIndex(currentBundle.getAlias(), 1, &ovrStrLen, &status);
                fDateOverride.setTo(TRUE, ovrStr, ovrStrLen);
                break;
             }
             default: {
                status = U_INVALID_FORMAT_ERROR;
-               ures_close(currentBundle);
                return;
             }
         }
         fPattern.setTo(TRUE, resStr, resStrLen);
-        ures_close(currentBundle);
     }
 
     // and if it includes _neither_, that's an error
@@ -1553,7 +1573,7 @@ SimpleDateFormat::subFormat(UnicodeString &appendTo,
             } else if (count == 2) {
                 value /= 10;
             }
-            FieldPosition p(0);
+            FieldPosition p(FieldPosition::DONT_CARE);
             currentNumberFormat->format(value, appendTo, p);
             if (count > 3) {
                 currentNumberFormat->setMinimumIntegerDigits(count - 3);
@@ -1671,7 +1691,7 @@ SimpleDateFormat::subFormat(UnicodeString &appendTo,
     case UDAT_TIMEZONE_ISO_FIELD: // 'X'
     case UDAT_TIMEZONE_ISO_LOCAL_FIELD: // 'x'
         {
-            UChar zsbuf[64];
+            UChar zsbuf[ZONE_NAME_U16_MAX];
             UnicodeString zoneString(zsbuf, 0, UPRV_LENGTHOF(zsbuf));
             const TimeZone& tz = cal.getTimeZone();
             UDate date = cal.getTime(status);
@@ -2040,7 +2060,7 @@ SimpleDateFormat::zeroPaddingNumber(
         int32_t value, int32_t minDigits, int32_t maxDigits) const
 {
     if (currentNumberFormat!=NULL) {
-        FieldPosition pos(0);
+        FieldPosition pos(FieldPosition::DONT_CARE);
 
         currentNumberFormat->setMinimumIntegerDigits(minDigits);
         currentNumberFormat->setMaximumIntegerDigits(maxDigits);
@@ -3034,9 +3054,9 @@ int32_t SimpleDateFormat::subParse(const UnicodeString& text, int32_t& start, UC
         // is treated literally:  "2250", "-1", "1", "002".
         if (fDateOverride.compare(hebr)==0 && value < 1000) {
             value += HEBREW_CAL_CUR_MILLENIUM_START_YEAR;
-        } else if ((pos.getIndex() - start) == 2 && !isChineseCalendar
-            && u_isdigit(text.charAt(start))
-            && u_isdigit(text.charAt(start+1)))
+        } else if (text.moveIndex32(start, 2) == pos.getIndex() && !isChineseCalendar
+            && u_isdigit(text.char32At(start))
+            && u_isdigit(text.char32At(text.moveIndex32(start, 1))))
         {
             // only adjust year for patterns less than 3.
             if(count < 3) {
@@ -3074,9 +3094,9 @@ int32_t SimpleDateFormat::subParse(const UnicodeString& text, int32_t& start, UC
         // Comment is the same as for UDAT_Year_FIELDs - look above
         if (fDateOverride.compare(hebr)==0 && value < 1000) {
             value += HEBREW_CAL_CUR_MILLENIUM_START_YEAR;
-        } else if ((pos.getIndex() - start) == 2
-            && u_isdigit(text.charAt(start))
-            && u_isdigit(text.charAt(start+1))
+        } else if (text.moveIndex32(start, 2) == pos.getIndex()
+            && u_isdigit(text.char32At(start))
+            && u_isdigit(text.char32At(text.moveIndex32(start, 1)))
             && fHaveDefaultCentury )
         {
             int32_t ambiguousTwoDigitYear = fDefaultCenturyStartYear % 100;
@@ -3182,7 +3202,7 @@ int32_t SimpleDateFormat::subParse(const UnicodeString& text, int32_t& start, UC
 
     case UDAT_FRACTIONAL_SECOND_FIELD:
         // Fractional seconds left-justify
-        i = pos.getIndex() - start;
+        i = countDigits(text, start, pos.getIndex());
         if (i < 3) {
             while (i < 3) {
                 value *= 10;
@@ -3706,6 +3726,19 @@ void SimpleDateFormat::parseInt(const UnicodeString& text,
             number.setLong(val);
         }
     }
+}
+
+int32_t SimpleDateFormat::countDigits(const UnicodeString& text, int32_t start, int32_t end) const {
+    int32_t numDigits = 0;
+    int32_t idx = start;
+    while (idx < end) {
+        UChar32 cp = text.char32At(idx);
+        if (u_isdigit(cp)) {
+            numDigits++;
+        }
+        idx += U16_LENGTH(cp);
+    }
+    return numDigits;
 }
 
 //----------------------------------------------------------------------

@@ -1,3 +1,5 @@
+// © 2016 and later: Unicode, Inc. and others.
+// License & terms of use: http://www.unicode.org/copyright.html
 /************************************************************************
  * COPYRIGHT:
  * Copyright (c) 1997-2016, International Business Machines Corporation
@@ -213,6 +215,8 @@ class NumberFormatTest: public CalendarTimeZoneTest {
     void Test11475_signRecognition();
     void Test11640_getAffixes();
     void Test11649_toPatternWithMultiCurrency();
+    void Test13327_numberingSystemBufferOverflow();
+    void Test13391_chakmaParsing();
 
     void checkExceptionIssue11735();
 

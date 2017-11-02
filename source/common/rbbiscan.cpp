@@ -1,3 +1,5 @@
+// © 2016 and later: Unicode, Inc. and others.
+// License & terms of use: http://www.unicode.org/copyright.html
 //
 //  file:  rbbiscan.cpp
 //
@@ -45,6 +47,7 @@
 //
 //------------------------------------------------------------------------------
 static const UChar gRuleSet_rule_char_pattern[]       = {
+ // Characters that may appear as literals in patterns without escaping or quoting.
  //   [    ^      [    \     p     {      Z     }     \     u    0      0    2      0
     0x5b, 0x5e, 0x5b, 0x5c, 0x70, 0x7b, 0x5a, 0x7d, 0x5c, 0x75, 0x30, 0x30, 0x32, 0x30,
  //   -    \      u    0     0     7      f     ]     -     [    \      p
@@ -556,6 +559,10 @@ UBool RBBIRuleScanner::doParseActions(int32_t action)
                 fRB->fDefaultTree   = &fRB->fSafeRevTree;
             } else if (opt == UNICODE_STRING("lookAheadHardBreak", 18)) {
                 fRB->fLookAheadHardBreak = TRUE;
+            } else if (opt == UNICODE_STRING("quoted_literals_only", 20)) {
+                fRuleSets[kRuleSet_rule_char-128].clear();
+            } else if (opt == UNICODE_STRING("unquoted_literals",  17)) {
+                fRuleSets[kRuleSet_rule_char-128].applyPattern(UnicodeString(gRuleSet_rule_char_pattern), *fRB->fStatus);
             } else {
                 error(U_BRK_UNRECOGNIZED_OPTION);
             }
@@ -1103,6 +1110,17 @@ void RBBIRuleScanner::parse() {
 
     }
 
+    if (U_FAILURE(*fRB->fStatus)) {
+        return;
+    }
+    
+    // If there are no forward rules set an error.
+    //
+    if (fRB->fForwardTree == NULL) {
+        error(U_BRK_RULE_SYNTAX);
+        return;
+    }
+
     //
     // If there were NO user specified reverse rules, set up the equivalent of ".*;"
     //
@@ -1126,16 +1144,15 @@ void RBBIRuleScanner::parse() {
     //
 #ifdef RBBI_DEBUG
     if (fRB->fDebugEnv && uprv_strstr(fRB->fDebugEnv, "symbols")) {fSymbolTable->rbbiSymtablePrint();}
-    if (fRB->fDebugEnv && uprv_strstr(fRB->fDebugEnv, "ptree"))
-    {
+    if (fRB->fDebugEnv && uprv_strstr(fRB->fDebugEnv, "ptree")) {
         RBBIDebugPrintf("Completed Forward Rules Parse Tree...\n");
-        fRB->fForwardTree->printTree(TRUE);
+        RBBINode::printTree(fRB->fForwardTree, TRUE);
         RBBIDebugPrintf("\nCompleted Reverse Rules Parse Tree...\n");
-        fRB->fReverseTree->printTree(TRUE);
+        RBBINode::printTree(fRB->fReverseTree, TRUE);
         RBBIDebugPrintf("\nCompleted Safe Point Forward Rules Parse Tree...\n");
-        fRB->fSafeFwdTree->printTree(TRUE);
+        RBBINode::printTree(fRB->fSafeFwdTree, TRUE);
         RBBIDebugPrintf("\nCompleted Safe Point Reverse Rules Parse Tree...\n");
-        fRB->fSafeRevTree->printTree(TRUE);
+        RBBINode::printTree(fRB->fSafeRevTree, TRUE);
     }
 #endif
 }
@@ -1150,7 +1167,7 @@ void RBBIRuleScanner::parse() {
 void RBBIRuleScanner::printNodeStack(const char *title) {
     int i;
     RBBIDebugPrintf("%s.  Dumping node stack...\n", title);
-    for (i=fNodeStackPtr; i>0; i--) {fNodeStack[i]->printTree(TRUE);}
+    for (i=fNodeStackPtr; i>0; i--) {RBBINode::printTree(fNodeStack[i], TRUE);}
 }
 #endif
 
@@ -1167,13 +1184,12 @@ RBBINode  *RBBIRuleScanner::pushNewNode(RBBINode::NodeType  t) {
     if (U_FAILURE(*fRB->fStatus)) {
         return NULL;
     }
-    fNodeStackPtr++;
-    if (fNodeStackPtr >= kStackSize) {
-        error(U_BRK_INTERNAL_ERROR);
+    if (fNodeStackPtr >= kStackSize - 1) {
+        error(U_BRK_RULE_SYNTAX);
         RBBIDebugPuts("RBBIRuleScanner::pushNewNode - stack overflow.");
-        *fRB->fStatus = U_BRK_INTERNAL_ERROR;
         return NULL;
     }
+    fNodeStackPtr++;
     fNodeStack[fNodeStackPtr] = new RBBINode(t);
     if (fNodeStack[fNodeStackPtr] == NULL) {
         *fRB->fStatus = U_MEMORY_ALLOCATION_ERROR;

@@ -1,3 +1,5 @@
+// © 2016 and later: Unicode, Inc. and others.
+// License & terms of use: http://www.unicode.org/copyright.html
 /*
 *******************************************************************************
 *
@@ -761,8 +763,8 @@ GenrbImporter::getRules(
     }
 
     /* Parse the data into an SRBRoot */
-    struct SRBRoot *data =
-            parse(ucbuf.getAlias(), inputDir, outputDir, filename.data(), FALSE, FALSE, &errorCode);
+    LocalPointer<SRBRoot> data(
+            parse(ucbuf.getAlias(), inputDir, outputDir, filename.data(), FALSE, FALSE, &errorCode));
     if (U_FAILURE(errorCode)) {
         return;
     }

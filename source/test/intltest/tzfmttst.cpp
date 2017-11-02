@@ -1,3 +1,5 @@
+// © 2016 and later: Unicode, Inc. and others.
+// License & terms of use: http://www.unicode.org/copyright.html
 /*
 *******************************************************************************
 * Copyright (C) 2007-2015, International Business Machines Corporation and    *
@@ -19,6 +21,7 @@
 #include "unicode/basictz.h"
 #include "unicode/tzfmt.h"
 #include "unicode/localpointer.h"
+#include "unicode/utf16.h"
 
 #include "cstring.h"
 #include "cstr.h"
@@ -80,7 +83,9 @@ TimeZoneFormatTest::runIndexedTest( int32_t index, UBool exec, const char* &name
         TESTCASE(3, TestISOFormat);
         TESTCASE(4, TestFormat);
         TESTCASE(5, TestFormatTZDBNames);
-        default: name = ""; break;
+        TESTCASE(6, TestFormatCustomZone);
+        TESTCASE(7, TestFormatTZDBNamesAllZoneCoverage);
+    default: name = ""; break;
     }
 }
 
@@ -136,7 +141,9 @@ TimeZoneFormatTest::TestTimeZoneRoundTrip(void) {
         Locale("en"),
         Locale("en_CA"),
         Locale("fr"),
-        Locale("zh_Hant")
+        Locale("zh_Hant"),
+        Locale("fa"),
+        Locale("ccp")
     };
 
     const Locale *LOCALES;
@@ -165,7 +172,6 @@ TimeZoneFormatTest::TestTimeZoneRoundTrip(void) {
         gmtFmt.format(0.0, localGMTString);
 
         for (int32_t patidx = 0; patidx < UPRV_LENGTHOF(PATTERNS); patidx++) {
-
             SimpleDateFormat *sdf = new SimpleDateFormat((UnicodeString)PATTERNS[patidx], LOCALES[locidx], status);
             if (U_FAILURE(status)) {
                 dataerrln((UnicodeString)"new SimpleDateFormat failed for pattern " +
@@ -181,7 +187,7 @@ TimeZoneFormatTest::TestTimeZoneRoundTrip(void) {
 
                 for (int32_t datidx = 0; datidx < nDates; datidx++) {
                     UnicodeString tzstr;
-                    FieldPosition fpos(0);
+                    FieldPosition fpos(FieldPosition::DONT_CARE);
                     // Format
                     sdf->setTimeZone(*tz);
                     sdf->format(DATES[datidx], tzstr, fpos);
@@ -296,10 +302,13 @@ TimeZoneFormatTest::TestTimeZoneRoundTrip(void) {
                         if (!isOffsetFormat) {
                             // Check if localized GMT format is used as a fallback of name styles
                             int32_t numDigits = 0;
-                            for (int n = 0; n < tzstr.length(); n++) {
-                                if (u_isdigit(tzstr.charAt(n))) {
+                            int32_t idx = 0;
+                            while (idx < tzstr.length()) {
+                                UChar32 cp = tzstr.char32At(idx);
+                                if (u_isdigit(cp)) {
                                     numDigits++;
                                 }
+                                idx += U16_LENGTH(cp);
                             }
                             isOffsetFormat = (numDigits > 0);
                         }
@@ -408,7 +417,7 @@ struct LocaleData {
         numDone = 0;
     }
 
-    UBool nextTest(int &rLocaleIndex, int &rPatternIndex) {
+    UBool nextTest(int32_t &rLocaleIndex, int32_t &rPatternIndex) {
         Mutex lock;
         if (patternIndex >= UPRV_LENGTHOF(PATTERNS) - 1) {
             if (localeIndex >= nLocales - 1) {
@@ -475,7 +484,7 @@ TimeZoneFormatTest::TestTimeRoundTrip(void) {
         Locale("ko_KR"), Locale("nb_NO"), Locale("nl_NL"), Locale("nn_NO"), Locale("pl_PL"),
         Locale("pt"), Locale("pt_BR"), Locale("pt_PT"), Locale("ru_RU"), Locale("sv_SE"),
         Locale("th_TH"), Locale("tr_TR"), Locale("zh"), Locale("zh_Hans"), Locale("zh_Hans_CN"),
-        Locale("zh_Hant"), Locale("zh_Hant_TW")
+        Locale("zh_Hant"), Locale("zh_Hant_TW"), Locale("fa"), Locale("ccp")
     };
 
     if (bTestAll) {
@@ -592,7 +601,8 @@ void TimeZoneFormatTest::RunTimeRoundTripTests(int32_t threadNumber) {
                 }
             }
 
-            if (*tzid == "Pacific/Apia" && uprv_strcmp(PATTERNS[patidx], "vvvv") == 0
+            if ((*tzid == "Pacific/Apia" || *tzid == "Pacific/Midway" || *tzid == "Pacific/Pago_Pago")
+                    && uprv_strcmp(PATTERNS[patidx], "vvvv") == 0
                     && logKnownIssue("11052", "Ambiguous zone name - Samoa Time")) {
                 continue;
             }
@@ -651,7 +661,7 @@ void TimeZoneFormatTest::RunTimeRoundTripTests(int32_t threadNumber) {
                     }
 
                     UnicodeString text;
-                    FieldPosition fpos(0);
+                    FieldPosition fpos(FieldPosition::DONT_CARE);
                     sdf->format(testTimes[testidx], text, fpos);
 
                     UDate parsedDate = sdf->parse(text, status);
@@ -831,7 +841,7 @@ TimeZoneFormatTest::TestParse(void) {
             delete tz;
         } else {
             if (DATA[i].expected) {
-                errln((UnicodeString)"Fail: Parse failure - expected: " + DATA[i].expected);
+                errMsg = (UnicodeString)"Parse failure - expected: " + DATA[i].expected;
             }
         }
         if (errMsg.length() > 0) {
@@ -1211,5 +1221,85 @@ TimeZoneFormatTest::TestFormatTZDBNames(void) {
     }
 }
 
+void
+TimeZoneFormatTest::TestFormatCustomZone(void) {
+    struct {
+        const char* id;
+        int32_t offset;
+        const char* expected;
+    } TESTDATA[] = {
+        { "abc", 3600000, "GMT+01:00" },                    // unknown ID
+        { "$abc", -3600000, "GMT-01:00" },                 // unknown, with ASCII variant char '$'
+        { "\\u00c1\\u00df\\u00c7", 5400000, "GMT+01:30"},    // unknown, with non-ASCII chars
+        { 0, 0, 0 }
+    };
+
+    UDate now = Calendar::getNow();
+
+    for (int32_t i = 0; ; i++) {
+        const char *id = TESTDATA[i].id;
+        if (id == 0) {
+            break;
+        }
+        UnicodeString tzid = UnicodeString(id, -1, US_INV).unescape();
+        SimpleTimeZone tz(TESTDATA[i].offset, tzid);
+
+        UErrorCode status = U_ZERO_ERROR;
+        LocalPointer<TimeZoneFormat> tzfmt(TimeZoneFormat::createInstance(Locale("en"), status));
+        if (tzfmt.isNull()) {
+            dataerrln("FAIL: TimeZoneFormat::createInstance failed for en");
+            return;
+        }
+        UnicodeString tzstr;
+        UnicodeString expected = UnicodeString(TESTDATA[i].expected, -1, US_INV).unescape();
+
+        tzfmt->format(UTZFMT_STYLE_SPECIFIC_LONG, tz, now, tzstr, NULL);
+        assertEquals(UnicodeString("Format result for ") + tzid, expected, tzstr);
+    }
+}
+
+void
+TimeZoneFormatTest::TestFormatTZDBNamesAllZoneCoverage(void) {
+    UErrorCode status = U_ZERO_ERROR;
+    LocalPointer<StringEnumeration> tzids(TimeZone::createEnumeration());
+    if (tzids.getAlias() == nullptr) {
+        dataerrln("%s %d tzids is null", __FILE__, __LINE__);
+        return;
+    }
+    const UnicodeString *tzid;
+    LocalPointer<TimeZoneNames> tzdbNames(TimeZoneNames::createTZDBInstance(Locale("en"), status));
+    UDate now = Calendar::getNow();
+    UnicodeString mzId;
+    UnicodeString name;
+    while ((tzid = tzids->snext(status))) {
+        logln("Zone: " + *tzid);
+        LocalPointer<TimeZone> tz(TimeZone::createTimeZone(*tzid));
+        tzdbNames->getMetaZoneID(*tzid, now, mzId);
+        if (mzId.isBogus()) {
+            logln((UnicodeString)"Meta zone: <not available>");
+        } else {
+            logln((UnicodeString)"Meta zone: " + mzId);
+        }
+
+        // mzID could be bogus here
+        tzdbNames->getMetaZoneDisplayName(mzId, UTZNM_SHORT_STANDARD, name);
+        // name could be bogus here
+        if (name.isBogus()) {
+            logln((UnicodeString)"Meta zone short standard name: <not available>");
+        }
+        else {
+            logln((UnicodeString)"Meta zone short standard name: " + name);
+        }
+
+        tzdbNames->getMetaZoneDisplayName(mzId, UTZNM_SHORT_DAYLIGHT, name);
+        // name could be bogus here
+        if (name.isBogus()) {
+            logln((UnicodeString)"Meta zone short daylight name: <not available>");
+        }
+        else {
+            logln((UnicodeString)"Meta zone short daylight name: " + name);
+        }
+    }
+}
 
 #endif /* #if !UCONFIG_NO_FORMATTING */

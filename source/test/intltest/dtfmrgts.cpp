@@ -1,3 +1,5 @@
+// © 2016 and later: Unicode, Inc. and others.
+// License & terms of use: http://www.unicode.org/copyright.html
 /********************************************************************
  * COPYRIGHT: 
  * Copyright (c) 1997-2016, International Business Machines Corporation and
@@ -45,7 +47,7 @@ DateFormatRegressionTest::runIndexedTest( int32_t index, UBool exec, const char*
         CASE(14,Test4104136)
         CASE(15,Test4104522)
         CASE(16,Test4106807)
-        CASE(17,Test4108407) 
+        CASE(17,Test4108407)
         CASE(18,Test4134203)
         CASE(19,Test4151631)
         CASE(20,Test4151706)
@@ -61,6 +63,7 @@ DateFormatRegressionTest::runIndexedTest( int32_t index, UBool exec, const char*
         CASE(30,TestT10619)
         CASE(31,TestT10855)
         CASE(32,TestT10906)
+        CASE(33,TestT13380)
         default: name = ""; break;
     }
 }
@@ -1072,7 +1075,7 @@ void DateFormatRegressionTest::Test4151706(void)
         errln("Fail: " + e);
     }*/
     UnicodeString temp;
-    FieldPosition pos(0);
+    FieldPosition pos(FieldPosition::DONT_CARE);
     logln(dateString + " -> " + fmt.format(d, temp, pos));
 }
 
@@ -1100,7 +1103,7 @@ DateFormatRegressionTest::Test4162071(void)
         else
             errln("Parse format \"" + format + "\" failed.");
         UnicodeString temp;
-        FieldPosition pos(0);
+        FieldPosition pos(FieldPosition::DONT_CARE);
         logln(dateString + " -> " + df.format(x, temp, pos));
     //} catch (Exception e) {
     //    errln("Parse format \"" + format + "\" failed.");
@@ -1562,7 +1565,7 @@ void DateFormatRegressionTest::TestT10334(void) {
     format.applyPattern(pattern);
     UDate referenceDate = format.parse(text, status);
 
-    FieldPosition fp(0);
+    FieldPosition fp(FieldPosition::DONT_CARE);
     UnicodeString formattedString("");
     pattern = UnicodeString("YYYY LL dd ee cc qq QQ");
     format.applyPattern(pattern);
@@ -1720,6 +1723,20 @@ void DateFormatRegressionTest::TestT10906(void) {
       if (errorIdx == -1) {          
           errln("failed to report invalid (negative) starting parse position");
       }
+}
+
+void DateFormatRegressionTest::TestT13380(void) {
+    UErrorCode errorCode = U_ZERO_ERROR;
+    LocalPointer<DateFormat> enFmt(DateFormat::createDateInstance(DateFormat::kShort, Locale("en")), errorCode);
+    if (U_FAILURE(errorCode)) {
+        errln("failure creating 'en' DateFormat");
+    }
+
+    errorCode = U_ZERO_ERROR;
+    LocalPointer<DateFormat> tgFmt(DateFormat::createDateInstance(DateFormat::kShort, Locale("tg")), errorCode);
+    if (U_FAILURE(errorCode)) {
+        errln("failure creating 'tg' DateFormat");
+    }
 }
 
 #endif /* #if !UCONFIG_NO_FORMATTING */

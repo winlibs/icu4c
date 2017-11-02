@@ -1,10 +1,12 @@
+// © 2016 and later: Unicode, Inc. and others.
+// License & terms of use: http://www.unicode.org/copyright.html
 /*
 **********************************************************************
 *   Copyright (C) 2002-2016, International Business Machines
 *   Corporation and others.  All Rights Reserved.
 **********************************************************************
 *   file name:  iotest.cpp
-*   encoding:   US-ASCII
+*   encoding:   UTF-8
 *   tab size:   8 (not used)
 *   indentation:4
 *
@@ -21,7 +23,6 @@
 #include "cmemory.h"
 #include "iotest.h"
 
-#if U_IOSTREAM_SOURCE >= 199711
 #if defined(__GNUC__) && __GNUC__ >= 4
 #define USE_SSTREAM 1
 #include <sstream>
@@ -104,12 +105,12 @@ static void U_CALLCONV TestStream(void)
 
     inTestStream >> inStr >> inStr2;
     if (inStr.compare(thisMu) != 0) {
-        u_austrncpy(inStrC, inStr.getBuffer(), inStr.length());
+        u_austrncpy(inStrC, toUCharPtr(inStr.getBuffer()), inStr.length());
         inStrC[inStr.length()] = 0;
         log_err("Got: \"%s\", Expected: \"tHis\\u03BC\"\n", inStrC);
     }
     if (inStr2.compare(mu) != 0) {
-        u_austrncpy(inStrC, inStr.getBuffer(), inStr.length());
+        u_austrncpy(inStrC, toUCharPtr(inStr.getBuffer()), inStr.length());
         inStrC[inStr.length()] = 0;
         log_err("Got: \"%s\", Expected: \"mu\"\n", inStrC);
     }
@@ -320,4 +321,3 @@ U_CFUNC void addStreamTests(TestNode** root) {
     addTest(root, &TestStream, "stream/TestStream");
     addTest(root, &TestStreamEOF, "stream/TestStreamEOF");
 }
-#endif

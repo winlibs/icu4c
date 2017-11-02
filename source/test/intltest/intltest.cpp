@@ -1,3 +1,5 @@
+// © 2016 and later: Unicode, Inc. and others.
+// License & terms of use: http://www.unicode.org/copyright.html
 /********************************************************************
  * COPYRIGHT:
  * Copyright (c) 1997-2016, International Business Machines Corporation and
@@ -27,6 +29,7 @@
 #include "unicode/ucnv.h"
 #include "unicode/unistr.h"
 #include "unicode/ures.h"
+#include "unicode/utf16.h"
 
 #include "intltest.h"
 
@@ -101,6 +104,18 @@ Int64ToUnicodeString(int64_t num)
 #else
     sprintf(buffer, "%lld", (long long)num);
 #endif
+    assert(danger == 'p');
+
+    return buffer;
+}
+
+UnicodeString
+DoubleToUnicodeString(double num)
+{
+    char buffer[64];    // nos changed from 10 to 64
+    char danger = 'p';  // guard against overrunning the buffer (rtg)
+
+    sprintf(buffer, "%1.14e", num);
     assert(danger == 'p');
 
     return buffer;

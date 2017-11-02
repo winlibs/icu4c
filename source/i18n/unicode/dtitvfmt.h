@@ -1,3 +1,5 @@
+// © 2016 and later: Unicode, Inc. and others.
+// License & terms of use: http://www.unicode.org/copyright.html
 /********************************************************************************
 * Copyright (C) 2008-2016, International Business Machines Corporation and
 * others. All Rights Reserved.
@@ -994,7 +996,7 @@ private:
 
 
     // from calendar field to pattern letter
-    static const UChar fgCalendarFieldToPatternLetter[];
+    static const char16_t fgCalendarFieldToPatternLetter[];
 
 
     /**

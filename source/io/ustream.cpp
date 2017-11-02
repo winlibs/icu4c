@@ -1,3 +1,5 @@
+// © 2016 and later: Unicode, Inc. and others.
+// License & terms of use: http://www.unicode.org/copyright.html
 /*
 **********************************************************************
 *   Copyright (C) 2001-2016, International Business Machines
@@ -26,8 +28,6 @@
 #include <string.h>
 
 // console IO
-
-#if U_IOSTREAM_SOURCE >= 199711
 
 #define STD_NAMESPACE std::
 
@@ -167,5 +167,4 @@ STOP_READING:
 
 U_NAMESPACE_END
 
-#endif
 #endif
