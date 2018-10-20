@@ -72,7 +72,7 @@
     </ClCompile>
     <ClCompile Include="rbbimonkeytest.cpp">
       <Filter>break iteration</Filter>
-      </ClCompile>
+    </ClCompile>
     <ClCompile Include="itspoof.cpp">
       <Filter>spoof detection</Filter>
     </ClCompile>
@@ -287,6 +287,9 @@
       <Filter>formatting</Filter>
     </ClCompile>
     <ClCompile Include="numbertest_skeletons.cpp">
+      <Filter>formatting</Filter>
+    </ClCompile>
+    <ClCompile Include="numbertest_range.cpp">
       <Filter>formatting</Filter>
     </ClCompile>
     <ClCompile Include="numfmtst.cpp">
@@ -531,6 +534,9 @@
     </ClCompile>
     <ClCompile Include="ucharstrietest.cpp">
       <Filter>data &amp; memory</Filter>
+    </ClCompile>
+    <ClCompile Include="erarulestest.cpp">
+      <Filter>formatting</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
@@ -913,6 +919,9 @@
       <Filter>formatting</Filter>
     </ClInclude>
     <ClInclude Include="listformattertest.h">
+      <Filter>formatting</Filter>
+    </ClInclude>
+    <ClInclude Include="erarulestest.h">
       <Filter>formatting</Filter>
     </ClInclude>
   </ItemGroup>

@@ -1283,35 +1283,40 @@ void RBBITest::TestUnicodeFiles() {
 
 
 // Check for test cases from the Unicode test data files that are known to fail
-// and should be skipped because ICU is not yet able to fully implement the spec.
-// See ticket #7270.
+// and should be skipped as known issues because ICU does not fully implement
+// the Unicode specifications, or because ICU includes tailorings that differ from
+// the Unicode standard.
+//
+// Test cases are identified by the test data sequence, which tends to be more stable
+// across Unicode versions than the test file line numbers.
+//
+// The test case with ticket "10666" is a dummy, included as an example.
 
 UBool RBBITest::testCaseIsKnownIssue(const UnicodeString &testCase, const char *fileName) {
     static struct TestCase {
+        const char *fTicketNum;
         const char *fFileName;
         const UChar *fString;
-    } badTestCases[] = {                                // Line Numbers from Unicode 7.0.0 file.
-        {"LineBreakTest.txt", u"\u200B\u0020}"},        // Line 5198
-        {"LineBreakTest.txt", u"\u200B\u0020)"},        // Line 5202
-        {"LineBreakTest.txt", u"\u200B\u0020!"},        // Line 5214
-        {"LineBreakTest.txt", u"\u200B\u0020,"},        // Line 5246
-        {"LineBreakTest.txt", u"\u200B\u0020/"},        // Line 5298
-        {"LineBreakTest.txt", u"\u200B\u0020\u2060"},   // Line 5302
-                                                        // Line Numbers from pre-release verion of GraphemeBreakTest-10.0.0.txt
-        {"GraphemeBreakTest.txt", u"\u200D\u2640"},     // Line 656, old GB 11 test ZWJ x GAZ
-        {"GraphemeBreakTest.txt", u"\u200D\U0001F466"}, // Line 658, old GB 11 test ZWJ x EBG
-        {"GraphemeBreakTest.txt", u"\u200D\U0001F466\U0001F3FB"}, // Line 842, old GB 11 test ZWJ x EBG x EModifier
-
-                                                        // Line Numbers from pre-release verion of WordBreakTest-10.0.0.txt
-        {"WordBreakTest.txt", u"\u200D\u261D"},         // Line 1356, ZWJ x EmojiNRK
-        {"WordBreakTest.txt", u"\u200D\U0001F3FB"},     // Line 1358, ZWJ x EmojiNRK
+    } badTestCases[] = {
+        {"10666", "GraphemeBreakTest.txt", u"\u0020\u0020\u0033"},    // Fake example, for illustration.
+        // Issue 8151, move the Finnish tailoring of the line break of hyphens to root.
+        // This probably ultimately wants to be resolved by updating UAX-14, but in the mean time
+        // ICU is out of sync with Unicode.
+        {"8151",  "LineBreakTest.txt", u"-#"},
+        {"8151",  "LineBreakTest.txt", u"\u002d\u0308\u0023"},
+        {"8151",  "LineBreakTest.txt", u"\u002d\u00a7"},
+        {"8151",  "LineBreakTest.txt", u"\u002d\u0308\u00a7"},
+        {"8151",  "LineBreakTest.txt", u"\u002d\U00050005"},
+        {"8151",  "LineBreakTest.txt", u"\u002d\u0308\U00050005"},
+        {"8151",  "LineBreakTest.txt", u"\u002d\u0e01"},
+        {"8151",  "LineBreakTest.txt", u"\u002d\u0308\u0e01"},
     };
 
     for (int n=0; n<UPRV_LENGTHOF(badTestCases); n++) {
         const TestCase &badCase = badTestCases[n];
         if (!strcmp(fileName, badCase.fFileName) &&
                 testCase == UnicodeString(badCase.fString)) {
-            return logKnownIssue("7270");
+            return logKnownIssue(badCase.fTicketNum);
         }
     }
     return FALSE;
@@ -2523,6 +2528,7 @@ private:
     UnicodeSet  *fB2;
     UnicodeSet  *fBA;
     UnicodeSet  *fBB;
+    UnicodeSet  *fHH;
     UnicodeSet  *fHY;
     UnicodeSet  *fH2;
     UnicodeSet  *fH3;
@@ -2550,7 +2556,7 @@ private:
     UnicodeSet  *fXX;
     UnicodeSet  *fEB;
     UnicodeSet  *fEM;
-    UnicodeSet  *fZJ;
+    UnicodeSet  *fZWJ;
 
     BreakIterator        *fCharBI;
     const UnicodeString  *fText;
@@ -2587,6 +2593,7 @@ RBBILineMonkey::RBBILineMonkey() :
     fB2    = new UnicodeSet(UNICODE_STRING_SIMPLE("[\\p{Line_break=B2}]"), status);
     fBA    = new UnicodeSet(UNICODE_STRING_SIMPLE("[\\p{Line_break=BA}]"), status);
     fBB    = new UnicodeSet(UNICODE_STRING_SIMPLE("[\\p{Line_break=BB}]"), status);
+    fHH    = new UnicodeSet();
     fHY    = new UnicodeSet(UNICODE_STRING_SIMPLE("[\\p{Line_break=HY}]"), status);
     fH2    = new UnicodeSet(UNICODE_STRING_SIMPLE("[\\p{Line_break=H2}]"), status);
     fH3    = new UnicodeSet(UNICODE_STRING_SIMPLE("[\\p{Line_break=H3}]"), status);
@@ -2615,7 +2622,7 @@ RBBILineMonkey::RBBILineMonkey() :
     fXX    = new UnicodeSet(UNICODE_STRING_SIMPLE("[\\p{Line_break=XX}]"), status);
     fEB    = new UnicodeSet(UNICODE_STRING_SIMPLE("[\\p{Line_break=EB}]"), status);
     fEM    = new UnicodeSet(UNICODE_STRING_SIMPLE("[\\p{Line_break=EM}]"), status);
-    fZJ    = new UnicodeSet(UNICODE_STRING_SIMPLE("[\\p{Line_break=ZWJ}]"), status);
+    fZWJ    = new UnicodeSet(UNICODE_STRING_SIMPLE("[\\p{Line_break=ZWJ}]"), status);
 
     if (U_FAILURE(status)) {
         deferredStatus = status;
@@ -2627,7 +2634,9 @@ RBBILineMonkey::RBBILineMonkey() :
     fAL->addAll(*fSG);     // Default behavior for SG is identical to AL.
 
     fNS->addAll(*fCJ);     // Default behavior for CJ is identical to NS.
-    fCM->addAll(*fZJ);     // ZWJ behaves as a CM.
+    fCM->addAll(*fZWJ);    // ZWJ behaves as a CM.
+
+    fHH->add(u'\u2010');   // Hyphen, '‐'
 
     fSets->addElement(fBK, status);
     fSets->addElement(fCR, status);
@@ -2669,7 +2678,7 @@ RBBILineMonkey::RBBILineMonkey() :
     fSets->addElement(fSG, status);
     fSets->addElement(fEB, status);
     fSets->addElement(fEM, status);
-    fSets->addElement(fZJ, status);
+    fSets->addElement(fZWJ, status);
 
 
     const char *rules =
@@ -2853,7 +2862,13 @@ int32_t RBBILineMonkey::next(int32_t startPos) {
         }
 
         // LB 8  Break after zero width space
-        if (fZW->contains(prevChar)) {
+        //       ZW SP* ÷
+        //       Scan backwards from prevChar for SP* ZW
+        tPos = prevPos;
+        while (tPos>0 && fSP->contains(fText->char32At(tPos))) {
+            tPos = fText->moveIndex32(tPos, -1);
+        }
+        if (fZW->contains(fText->char32At(tPos))) {
             break;
         }
 
@@ -2890,7 +2905,7 @@ int32_t RBBILineMonkey::next(int32_t startPos) {
         {
             int32_t prevIdx = fText->moveIndex32(pos, -1);
             UChar32 prevC = fText->char32At(prevIdx);
-            if (fZJ->contains(prevC)) {
+            if (fZWJ->contains(prevC)) {
                 continue;
             }
         }
@@ -3025,6 +3040,15 @@ int32_t RBBILineMonkey::next(int32_t startPos) {
             break;
         }
 
+        // LB 20.09  Don't break between Hyphens and letters if a break precedes the hyphen.
+        //           Formerly this was a Finnish tailoring.
+        //           Moved to root in ICU 63. This is an ICU customization, not in UAX-14.
+        //    ^($HY | $HH) $AL;
+        if (fAL->contains(thisChar) && (fHY->contains(prevChar) || fHH->contains(prevChar)) &&
+                prevPosX2 == -1) {
+            continue;
+        }
+
         // LB 21
         if (fBA->contains(thisChar) ||
             fHY->contains(thisChar) ||
@@ -3148,12 +3172,16 @@ int32_t RBBILineMonkey::next(int32_t startPos) {
             continue;
         }
 
-        // LB30a    RI RI <break> RI
-        //             RI    x    RI
+        // LB30a    RI RI  ÷  RI
+        //             RI  x  RI
         if (fRI->contains(prevCharX2) && fRI->contains(prevChar) && fRI->contains(thisChar)) {
             break;
         }
         if (fRI->contains(prevChar) && fRI->contains(thisChar)) {
+            // Two Regional Indicators have been paired.
+            // Over-write the trailing one (thisChar) to prevent it from forming another pair with a
+            // following RI. This is a hack.
+            thisChar = -1;
             continue;
         }
 
@@ -3192,6 +3220,7 @@ RBBILineMonkey::~RBBILineMonkey() {
     delete fB2;
     delete fBA;
     delete fBB;
+    delete fHH;
     delete fHY;
     delete fH2;
     delete fH3;
@@ -3220,7 +3249,7 @@ RBBILineMonkey::~RBBILineMonkey() {
     delete fXX;
     delete fEB;
     delete fEM;
-    delete fZJ;
+    delete fZWJ;
 
     delete fCharBI;
     delete fNumberMatcher;

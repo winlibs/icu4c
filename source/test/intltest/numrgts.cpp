@@ -11,6 +11,7 @@
 
 #include "numrgts.h"
 
+#include <cmath>   // std::signbit
 #include <float.h> // DBL_MIN, DBL_MAX
 #include <stdio.h>
 
@@ -548,8 +549,8 @@ void NumberFormatRegressionTest::Test4086575(void)
     // nbsp = \u00a0
     //nf->applyLocalizedPattern("#\u00a0###,00;(#\u00a0###,00)");
     UChar patChars[] = {
-             0x23, 0x00a0, 0x23, 0x23, 0x23, 0x2c, 0x30, 0x30, 0x3b, 
-        0x28, 0x23, 0x00a0, 0x23, 0x23, 0x23, 0x2c, 0x30, 0x30, 0x29
+             0x23, 0x202f, 0x23, 0x23, 0x23, 0x2c, 0x30, 0x30, 0x3b, 
+        0x28, 0x23, 0x202f, 0x23, 0x23, 0x23, 0x2c, 0x30, 0x30, 0x29
     };
     UnicodeString pat(patChars, 19, 19);
     nf->applyLocalizedPattern(pat, status);
@@ -560,7 +561,7 @@ void NumberFormatRegressionTest::Test4086575(void)
     buffer = nf->format((int32_t)1234, buffer, pos);
     //if (buffer != UnicodeString("1\u00a0234,00"))
     UChar c[] = {
-        0x31, 0x00a0, 0x32, 0x33, 0x34, 0x2c, 0x30, 0x30
+        0x31, 0x202f, 0x32, 0x33, 0x34, 0x2c, 0x30, 0x30
     };
     UnicodeString cc(c, 8, 8);
     if (buffer != cc)
@@ -569,7 +570,7 @@ void NumberFormatRegressionTest::Test4086575(void)
     buffer.remove();
     buffer = nf->format((int32_t)-1234, buffer, pos);
     UChar c1[] = {
-        0x28, 0x31, 0x00a0, 0x32, 0x33, 0x34, 0x2c, 0x30, 0x30, 0x29
+        0x28, 0x31, 0x202f, 0x32, 0x33, 0x34, 0x2c, 0x30, 0x30, 0x29
     };
     UnicodeString cc1(c1, 10, 10);
     if (buffer != cc1)
@@ -898,18 +899,18 @@ void NumberFormatRegressionTest::Test4070798 (void)
     UnicodeString tempString;
     
     /* User error :
-    String expectedDefault = "-5\u00a0789,987";
-    String expectedCurrency = "5\u00a0789,98\u00a0F";
-    String expectedPercent = "-578\u00a0998%";
+    String expectedDefault = "-5\u202f789,987";
+    String expectedCurrency = "5\u202f789,98\u00a0F";
+    String expectedPercent = "-578\u202f998%";
     */
     UChar chars1 [] = {
-        0x2d, 0x35, 0x00a0, 0x37, 0x38, 0x39, 0x2c, 0x39, 0x38, 0x38
+        0x2d, 0x35, 0x202f, 0x37, 0x38, 0x39, 0x2c, 0x39, 0x38, 0x38
     };
     UChar chars2 [] = {
-        0x35, 0x00a0, 0x37, 0x38, 0x39, 0x2c, 0x39, 0x39, 0x00a0, 0x46
+        0x35, 0x202f, 0x37, 0x38, 0x39, 0x2c, 0x39, 0x39, 0x00a0, 0x46
     };
     UChar chars3 [] = {
-        0x2d, 0x35, 0x37, 0x38, 0x00a0, 0x39, 0x39, 0x39, 0x00a0, 0x25
+        0x2d, 0x35, 0x37, 0x38, 0x202f, 0x39, 0x39, 0x39, 0x00a0, 0x25
     };
     UnicodeString expectedDefault(chars1, 10, 10);
     UnicodeString expectedCurrency(chars2, 10, 10);
@@ -2142,8 +2143,9 @@ NumberFormatRegressionTest::Test4162852(void)
 {
     UErrorCode status = U_ZERO_ERROR;
     for(int32_t i=0; i < 2; ++i) {
-        NumberFormat *f = (i == 0) ? NumberFormat::createInstance(status)
-            : NumberFormat::createPercentInstance(status);
+        LocalPointer<NumberFormat> f(
+            ((i == 0) ? NumberFormat::createInstance(status) : NumberFormat::createPercentInstance(status)),
+            status);
         if(U_FAILURE(status)) {
             dataerrln("Couldn't create number format - %s", u_errorName(status));
             return;
@@ -2154,20 +2156,19 @@ NumberFormatRegressionTest::Test4162852(void)
         f->format(d, s);
         Formattable n;
         f->parse(s, n, status);
-        if(U_FAILURE(status))
+        if(U_FAILURE(status)) {
             errln("Couldn't parse!");
+            return;
+        }
         double e = n.getDouble();
-        logln(UnicodeString("") +
-              d + " -> " +
-              '"' + s + '"' + " -> " + e);
+        logln("%f -> \"%s\" -> %f", d, CStr(s)(), e);
 #if (U_PLATFORM == U_PF_OS390 && !defined(IEEE_754)) || U_PLATFORM == U_PF_OS400
         if (e != 0.0) {
 #else
-        if (e != 0.0 || 1.0/e > 0.0) {
+        if (e != 0.0 || (std::signbit(e) == false)) {
 #endif
-            logln("Failed to parse negative zero");
+            errln("Failed to parse negative zero");
         }
-        delete f;
     }
 }
 

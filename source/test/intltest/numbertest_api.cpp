@@ -17,6 +17,7 @@
 #include "unicode/utypes.h"
 
 // Horrible workaround for the lack of a status code in the constructor...
+// (Also affects numbertest_range.cpp)
 UErrorCode globalNumberFormatterApiTestStatus = U_ZERO_ERROR;
 
 NumberFormatterApiTest::NumberFormatterApiTest()
@@ -401,6 +402,22 @@ void NumberFormatterApiTest::notationCompact() {
             Locale::getEnglish(),
             9990000,
             u"10M");
+
+    assertFormatSingle(
+            u"Compact in zh-Hant-HK",
+            u"compact-short",
+            NumberFormatter::with().notation(Notation::compactShort()),
+            Locale("zh-Hant-HK"),
+            1e7,
+            u"10M");
+
+    assertFormatSingle(
+            u"Compact in zh-Hant",
+            u"compact-short",
+            NumberFormatter::with().notation(Notation::compactShort()),
+            Locale("zh-Hant"),
+            1e7,
+            u"1000\u842C");
 
     // NOTE: There is no API for compact custom data in C++
     // and thus no "Compact Somali No Figure" test
@@ -1553,8 +1570,8 @@ void NumberFormatterApiTest::symbols() {
             nullptr,
             NumberFormatter::with().symbols(FRENCH_SYMBOLS),
             Locale::getJapan(),
-            u"87 650",
-            u"8 765",
+            u"87\u202F650",
+            u"8\u202F765",
             u"876,5",
             u"87,65",
             u"8,765",
@@ -1591,8 +1608,8 @@ void NumberFormatterApiTest::symbols() {
             u"numbering-system/mathsanb",
             NumberFormatter::with().adoptSymbols(new NumberingSystem(MATHSANB)),
             Locale::getFrench(),
-            u"𝟴𝟳 𝟲𝟱𝟬",
-            u"𝟴 𝟳𝟲𝟱",
+            u"𝟴𝟳\u202F𝟲𝟱𝟬",
+            u"𝟴\u202F𝟳𝟲𝟱",
             u"𝟴𝟳𝟲,𝟱",
             u"𝟴𝟳,𝟲𝟱",
             u"𝟴,𝟳𝟲𝟱",
@@ -2045,7 +2062,7 @@ void NumberFormatterApiTest::locale() {
     UErrorCode status = U_ZERO_ERROR;
     UnicodeString actual = NumberFormatter::withLocale(Locale::getFrench()).formatInt(1234, status)
             .toString();
-    assertEquals("Locale withLocale()", u"1 234", actual);
+    assertEquals("Locale withLocale()", u"1\u202f234", actual);
 }
 
 void NumberFormatterApiTest::formatTypes() {
@@ -2371,8 +2388,15 @@ void NumberFormatterApiTest::copyMove() {
     assertTrue("[constructor] Source should be reset after move", l1.getCompiled() == nullptr);
 
     // Reset l1 and l2 to check for macro-props copying for behavior testing
+    // Make the test more interesting: also warm them up with a compiled formatter.
     l1 = NumberFormatter::withLocale("en");
+    l1.formatInt(1, status);
+    l1.formatInt(1, status);
+    l1.formatInt(1, status);
     l2 = NumberFormatter::withLocale("en");
+    l2.formatInt(1, status);
+    l2.formatInt(1, status);
+    l2.formatInt(1, status);
 
     // Copy assignment
     l1 = l3;

@@ -13,6 +13,7 @@
 #include "umutex.h"
 #include "cmemory.h"
 #include "cstring.h"
+#include "indiancal.h"
 #include "uparse.h"
 #include "unicode/localpointer.h"
 #include "unicode/resbund.h"
@@ -81,6 +82,9 @@ void MultithreadTest::runIndexedTest( int32_t index, UBool exec,
 #if !UCONFIG_NO_TRANSLITERATION
     TESTCASE_AUTO(TestBreakTranslit);
     TESTCASE_AUTO(TestIncDec);
+#if !UCONFIG_NO_FORMATTING
+    TESTCASE_AUTO(Test20104);
+#endif /* #if !UCONFIG_NO_FORMATTING */
 #endif /* #if !UCONFIG_NO_TRANSLITERATION */
     TESTCASE_AUTO_END
 }
@@ -629,9 +633,9 @@ public:
                 FormatThreadTestData( 1.0, CharsToUnicodeString("100\\u00a0%")),
                 FormatThreadTestData( 0.26, CharsToUnicodeString("26\\u00a0%")),
                 FormatThreadTestData(
-                   16384.99, CharsToUnicodeString("1\\u00a0638\\u00a0499\\u00a0%")), // U+00a0 = NBSP
+                   16384.99, CharsToUnicodeString("1\\u202F638\\u202F499\\u00a0%")), // U+202F = NNBSP
                 FormatThreadTestData(
-                    81890.23, CharsToUnicodeString("8\\u00a0189\\u00a0023\\u00a0%")),
+                    81890.23, CharsToUnicodeString("8\\u202F189\\u202F023\\u00a0%")),
         };
         int32_t kPercentFormatTestDataLength = UPRV_LENGTHOF(kPercentFormatTestData);
         int32_t iteration;
@@ -1548,5 +1552,36 @@ void MultithreadTest::TestIncDec()
     assertEquals("TestIncDec", NUM_THREADS, gIncDecCounter);
 }
 
+#if !UCONFIG_NO_FORMATTING
+static Calendar  *gSharedCalendar = {};
+
+class Test20104Thread : public SimpleThread {
+public:
+    Test20104Thread() { };
+    virtual void run();
+};
+
+void Test20104Thread::run() {
+    gSharedCalendar->defaultCenturyStartYear();
+}
+
+void MultithreadTest::Test20104() {
+    UErrorCode status = U_ZERO_ERROR;
+    Locale loc("hi_IN");
+    gSharedCalendar = new IndianCalendar(loc, status);
+    assertSuccess("Test20104", status);
+
+    static constexpr int NUM_THREADS = 4;
+    Test20104Thread threads[NUM_THREADS];
+    for (auto &thread:threads) {
+        thread.start();
+    }
+    for (auto &thread:threads) {
+        thread.join();
+    }
+    delete gSharedCalendar;
+    // Note: failure is reported by Thread Sanitizer. Test itself succeeds.
+}
+#endif /* !UCONFIG_NO_FORMATTING */
 
 #endif /* !UCONFIG_NO_TRANSLITERATION */

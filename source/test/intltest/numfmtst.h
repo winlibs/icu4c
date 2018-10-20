@@ -266,6 +266,7 @@ class NumberFormatTest: public CalendarTimeZoneTest {
     void Test11645_ApplyPatternEquality();
     void Test12567();
     void Test11626_CustomizeCurrencyPluralInfo();
+    void Test20073_StrictPercentParseErrorIndex();
     void Test13056_GroupingSize();
     void Test11025_CurrencyPadding();
     void Test11648_ExpDecFormatMalPattern();
@@ -279,7 +280,9 @@ class NumberFormatTest: public CalendarTimeZoneTest {
     void Test13763_FieldPositionIteratorOffset();
     void Test13777_ParseLongNameNonCurrencyMode();
     void Test13804_EmptyStringsWhenParsing();
+    void Test20037_ScientificIntegerOverflow();
     void Test13840_ParseLongStringCrash();
+    void Test13850_EmptyStringCurrency();
 
  private:
     UBool testFormattableAsUFormattable(const char *file, int line, Formattable &f);
