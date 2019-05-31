@@ -906,7 +906,7 @@ void RBBIMonkeyTest::testMonkey() {
     UnicodeString params(fParams);
     UErrorCode status = U_ZERO_ERROR;
 
-    const char *tests[] = {"grapheme.txt", "word.txt", "line.txt", "sentence.txt", "line_normal.txt",
+    const char *tests[] = {"grapheme.txt", "word.txt", "line.txt", "line_cj.txt", "sentence.txt", "line_normal.txt",
                            "line_normal_cj.txt", "line_loose.txt", "line_loose_cj.txt", "word_POSIX.txt",
                            NULL };
     CharString testNameFromParams;
@@ -954,8 +954,8 @@ void RBBIMonkeyTest::testMonkey() {
         }
         test->fDumpExpansions = dumpExpansions;
         test->fVerbose = verbose;
-        test->fRandomGenerator.seed((uint32_t)seed);
-        test->fLoopCount = loopCount;
+        test->fRandomGenerator.seed(static_cast<uint32_t>(seed));
+        test->fLoopCount = static_cast<int32_t>(loopCount);
         test->setup(tests[i], status);
         if (U_FAILURE(status)) {
             dataerrln("%s:%d: error %s while starting test %s.", __FILE__, __LINE__, u_errorName(status), tests[i]);

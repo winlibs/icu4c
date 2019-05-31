@@ -95,6 +95,12 @@ void IntlTestDecimalFormatAPI::runIndexedTest( int32_t index, UBool exec, const 
                testErrorCode();
             }
             break;
+         case 9: name = "testInvalidObject";
+            if(exec) {
+                logln((UnicodeString) "testInvalidObject ---");
+                testInvalidObject();
+            }
+            break;
        default: name = ""; break;
     }
 }
@@ -636,34 +642,46 @@ void IntlTestDecimalFormatAPI::TestScale()
 }
 
 
-#define ASSERT_EQUAL(expect, actual) { char tmp[200]; sprintf(tmp, "(%g==%g)", (double)(expect), (double)(actual)); \
-    assertTrue(tmp, ((expect)==(actual)), FALSE, TRUE, __FILE__, __LINE__); }
+#define ASSERT_EQUAL(expect, actual) { \
+    /* ICU-20080: Use temporary variables to avoid strange compiler behaviour \
+       (with the nice side-effect of avoiding repeated function calls too). */ \
+    auto lhs = (expect); \
+    auto rhs = (actual); \
+    char tmp[200]; \
+    sprintf(tmp, "(%g==%g)", (double)lhs, (double)rhs); \
+    assertTrue(tmp, (lhs==rhs), FALSE, TRUE, __FILE__, __LINE__); }
 
+#if defined(_MSC_VER)
+// Ignore the noisy warning 4805 (comparisons between int and bool) in the function below as we use the ICU TRUE/FALSE macros
+// which are int values, whereas some of the DecimalQuantity methods return C++ bools.
+#pragma warning(push)
+#pragma warning(disable: 4805)
+#endif
 void IntlTestDecimalFormatAPI::TestFixedDecimal() {
     UErrorCode status = U_ZERO_ERROR;
 
     LocalPointer<DecimalFormat> df(new DecimalFormat("###", status), status);
-    TEST_ASSERT_STATUS(status);
+    assertSuccess(WHERE, status);
     if (status == U_MISSING_RESOURCE_ERROR) {
         return;
     }
     number::impl::DecimalQuantity fd;
     df->formatToDecimalQuantity(44, fd, status);
-    TEST_ASSERT_STATUS(status);
+    assertSuccess(WHERE, status);
     ASSERT_EQUAL(44, fd.getPluralOperand(PLURAL_OPERAND_N));
     ASSERT_EQUAL(0, fd.getPluralOperand(PLURAL_OPERAND_V));
     ASSERT_EQUAL(FALSE, fd.isNegative());
 
     df->formatToDecimalQuantity(-44, fd, status);
-    TEST_ASSERT_STATUS(status);
+    assertSuccess(WHERE, status);
     ASSERT_EQUAL(44, fd.getPluralOperand(PLURAL_OPERAND_N));
     ASSERT_EQUAL(0, fd.getPluralOperand(PLURAL_OPERAND_V));
     ASSERT_EQUAL(TRUE, fd.isNegative());
 
     df.adoptInsteadAndCheckErrorCode(new DecimalFormat("###.00##", status), status);
-    TEST_ASSERT_STATUS(status);
+    assertSuccess(WHERE, status);
     df->formatToDecimalQuantity(123.456, fd, status);
-    TEST_ASSERT_STATUS(status);
+    assertSuccess(WHERE, status);
     ASSERT_EQUAL(3, fd.getPluralOperand(PLURAL_OPERAND_V)); // v
     ASSERT_EQUAL(456, fd.getPluralOperand(PLURAL_OPERAND_F)); // f
     ASSERT_EQUAL(456, fd.getPluralOperand(PLURAL_OPERAND_T)); // t
@@ -673,7 +691,7 @@ void IntlTestDecimalFormatAPI::TestFixedDecimal() {
     ASSERT_EQUAL(FALSE, fd.isNegative());
 
     df->formatToDecimalQuantity(-123.456, fd, status);
-    TEST_ASSERT_STATUS(status);
+    assertSuccess(WHERE, status);
     ASSERT_EQUAL(3, fd.getPluralOperand(PLURAL_OPERAND_V)); // v
     ASSERT_EQUAL(456, fd.getPluralOperand(PLURAL_OPERAND_F)); // f
     ASSERT_EQUAL(456, fd.getPluralOperand(PLURAL_OPERAND_T)); // t
@@ -685,7 +703,7 @@ void IntlTestDecimalFormatAPI::TestFixedDecimal() {
     // test max int digits
     df->setMaximumIntegerDigits(2);
     df->formatToDecimalQuantity(123.456, fd, status);
-    TEST_ASSERT_STATUS(status);
+    assertSuccess(WHERE, status);
     ASSERT_EQUAL(3, fd.getPluralOperand(PLURAL_OPERAND_V)); // v
     ASSERT_EQUAL(456, fd.getPluralOperand(PLURAL_OPERAND_F)); // f
     ASSERT_EQUAL(456, fd.getPluralOperand(PLURAL_OPERAND_T)); // t
@@ -695,7 +713,7 @@ void IntlTestDecimalFormatAPI::TestFixedDecimal() {
     ASSERT_EQUAL(FALSE, fd.isNegative());
 
     df->formatToDecimalQuantity(-123.456, fd, status);
-    TEST_ASSERT_STATUS(status);
+    assertSuccess(WHERE, status);
     ASSERT_EQUAL(3, fd.getPluralOperand(PLURAL_OPERAND_V)); // v
     ASSERT_EQUAL(456, fd.getPluralOperand(PLURAL_OPERAND_F)); // f
     ASSERT_EQUAL(456, fd.getPluralOperand(PLURAL_OPERAND_T)); // t
@@ -708,7 +726,7 @@ void IntlTestDecimalFormatAPI::TestFixedDecimal() {
     df->setMaximumIntegerDigits(2000000000);
     df->setMaximumFractionDigits(2);
     df->formatToDecimalQuantity(123.456, fd, status);
-    TEST_ASSERT_STATUS(status);
+    assertSuccess(WHERE, status);
     ASSERT_EQUAL(2, fd.getPluralOperand(PLURAL_OPERAND_V)); // v
     ASSERT_EQUAL(46, fd.getPluralOperand(PLURAL_OPERAND_F)); // f
     ASSERT_EQUAL(46, fd.getPluralOperand(PLURAL_OPERAND_T)); // t
@@ -718,7 +736,7 @@ void IntlTestDecimalFormatAPI::TestFixedDecimal() {
     ASSERT_EQUAL(FALSE, fd.isNegative());
 
     df->formatToDecimalQuantity(-123.456, fd, status);
-    TEST_ASSERT_STATUS(status);
+    assertSuccess(WHERE, status);
     ASSERT_EQUAL(2, fd.getPluralOperand(PLURAL_OPERAND_V)); // v
     ASSERT_EQUAL(46, fd.getPluralOperand(PLURAL_OPERAND_F)); // f
     ASSERT_EQUAL(46, fd.getPluralOperand(PLURAL_OPERAND_T)); // t
@@ -732,7 +750,7 @@ void IntlTestDecimalFormatAPI::TestFixedDecimal() {
     df->setRoundingIncrement(7.3);
 
     df->formatToDecimalQuantity(30.0, fd, status);
-    TEST_ASSERT_STATUS(status);
+    assertSuccess(WHERE, status);
     ASSERT_EQUAL(2, fd.getPluralOperand(PLURAL_OPERAND_V)); // v
     ASSERT_EQUAL(20, fd.getPluralOperand(PLURAL_OPERAND_F)); // f
     ASSERT_EQUAL(2, fd.getPluralOperand(PLURAL_OPERAND_T)); // t
@@ -742,7 +760,7 @@ void IntlTestDecimalFormatAPI::TestFixedDecimal() {
     ASSERT_EQUAL(FALSE, fd.isNegative());
 
     df->formatToDecimalQuantity(-30.0, fd, status);
-    TEST_ASSERT_STATUS(status);
+    assertSuccess(WHERE, status);
     ASSERT_EQUAL(2, fd.getPluralOperand(PLURAL_OPERAND_V)); // v
     ASSERT_EQUAL(20, fd.getPluralOperand(PLURAL_OPERAND_F)); // f
     ASSERT_EQUAL(2, fd.getPluralOperand(PLURAL_OPERAND_T)); // t
@@ -752,9 +770,9 @@ void IntlTestDecimalFormatAPI::TestFixedDecimal() {
     ASSERT_EQUAL(TRUE, fd.isNegative());
 
     df.adoptInsteadAndCheckErrorCode(new DecimalFormat("###", status), status);
-    TEST_ASSERT_STATUS(status);
+    assertSuccess(WHERE, status);
     df->formatToDecimalQuantity(123.456, fd, status);
-    TEST_ASSERT_STATUS(status);
+    assertSuccess(WHERE, status);
     ASSERT_EQUAL(0, fd.getPluralOperand(PLURAL_OPERAND_V));
     ASSERT_EQUAL(0, fd.getPluralOperand(PLURAL_OPERAND_F));
     ASSERT_EQUAL(0, fd.getPluralOperand(PLURAL_OPERAND_T));
@@ -763,9 +781,9 @@ void IntlTestDecimalFormatAPI::TestFixedDecimal() {
     ASSERT_EQUAL(FALSE, fd.isNegative());
 
     df.adoptInsteadAndCheckErrorCode(new DecimalFormat("###.0", status), status);
-    TEST_ASSERT_STATUS(status);
+    assertSuccess(WHERE, status);
     df->formatToDecimalQuantity(123.01, fd, status);
-    TEST_ASSERT_STATUS(status);
+    assertSuccess(WHERE, status);
     ASSERT_EQUAL(1, fd.getPluralOperand(PLURAL_OPERAND_V));
     ASSERT_EQUAL(0, fd.getPluralOperand(PLURAL_OPERAND_F));
     ASSERT_EQUAL(0, fd.getPluralOperand(PLURAL_OPERAND_T));
@@ -774,9 +792,9 @@ void IntlTestDecimalFormatAPI::TestFixedDecimal() {
     ASSERT_EQUAL(FALSE, fd.isNegative());
 
     df.adoptInsteadAndCheckErrorCode(new DecimalFormat("###.0", status), status);
-    TEST_ASSERT_STATUS(status);
+    assertSuccess(WHERE, status);
     df->formatToDecimalQuantity(123.06, fd, status);
-    TEST_ASSERT_STATUS(status);
+    assertSuccess(WHERE, status);
     ASSERT_EQUAL(1, fd.getPluralOperand(PLURAL_OPERAND_V));
     ASSERT_EQUAL(1, fd.getPluralOperand(PLURAL_OPERAND_F));
     ASSERT_EQUAL(1, fd.getPluralOperand(PLURAL_OPERAND_T));
@@ -785,9 +803,9 @@ void IntlTestDecimalFormatAPI::TestFixedDecimal() {
     ASSERT_EQUAL(FALSE, fd.isNegative());
 
     df.adoptInsteadAndCheckErrorCode(new DecimalFormat("@@@@@", status), status);  // Significant Digits
-    TEST_ASSERT_STATUS(status);
+    assertSuccess(WHERE, status);
     df->formatToDecimalQuantity(123, fd, status);
-    TEST_ASSERT_STATUS(status);
+    assertSuccess(WHERE, status);
     ASSERT_EQUAL(2, fd.getPluralOperand(PLURAL_OPERAND_V));
     ASSERT_EQUAL(0, fd.getPluralOperand(PLURAL_OPERAND_F));
     ASSERT_EQUAL(0, fd.getPluralOperand(PLURAL_OPERAND_T));
@@ -796,9 +814,9 @@ void IntlTestDecimalFormatAPI::TestFixedDecimal() {
     ASSERT_EQUAL(FALSE, fd.isNegative());
 
     df.adoptInsteadAndCheckErrorCode(new DecimalFormat("@@@@@", status), status);  // Significant Digits
-    TEST_ASSERT_STATUS(status);
+    assertSuccess(WHERE, status);
     df->formatToDecimalQuantity(1.23, fd, status);
-    TEST_ASSERT_STATUS(status);
+    assertSuccess(WHERE, status);
     ASSERT_EQUAL(4, fd.getPluralOperand(PLURAL_OPERAND_V));
     ASSERT_EQUAL(2300, fd.getPluralOperand(PLURAL_OPERAND_F));
     ASSERT_EQUAL(23, fd.getPluralOperand(PLURAL_OPERAND_T));
@@ -807,24 +825,24 @@ void IntlTestDecimalFormatAPI::TestFixedDecimal() {
     ASSERT_EQUAL(FALSE, fd.isNegative());
 
     df->formatToDecimalQuantity(uprv_getInfinity(), fd, status);
-    TEST_ASSERT_STATUS(status);
+    assertSuccess(WHERE, status);
     ASSERT_EQUAL(TRUE, fd.isNaN() || fd.isInfinite());
     df->formatToDecimalQuantity(0.0, fd, status);
     ASSERT_EQUAL(FALSE, fd.isNaN() || fd.isInfinite());
     df->formatToDecimalQuantity(uprv_getNaN(), fd, status);
     ASSERT_EQUAL(TRUE, fd.isNaN() || fd.isInfinite());
-    TEST_ASSERT_STATUS(status);
+    assertSuccess(WHERE, status);
 
     // Test Big Decimal input.
     // 22 digits before and after decimal, will exceed the precision of a double
     //    and force DecimalFormat::getFixedDecimal() to work with a digit list.
     df.adoptInsteadAndCheckErrorCode(
         new DecimalFormat("#####################0.00####################", status), status);
-    TEST_ASSERT_STATUS(status);
+    assertSuccess(WHERE, status);
     Formattable fable("12.34", status);
-    TEST_ASSERT_STATUS(status);
+    assertSuccess(WHERE, status);
     df->formatToDecimalQuantity(fable, fd, status);
-    TEST_ASSERT_STATUS(status);
+    assertSuccess(WHERE, status);
     ASSERT_EQUAL(2, fd.getPluralOperand(PLURAL_OPERAND_V));
     ASSERT_EQUAL(34, fd.getPluralOperand(PLURAL_OPERAND_F));
     ASSERT_EQUAL(34, fd.getPluralOperand(PLURAL_OPERAND_T));
@@ -833,9 +851,9 @@ void IntlTestDecimalFormatAPI::TestFixedDecimal() {
     ASSERT_EQUAL(FALSE, fd.isNegative());
 
     fable.setDecimalNumber("12.3456789012345678900123456789", status);
-    TEST_ASSERT_STATUS(status);
+    assertSuccess(WHERE, status);
     df->formatToDecimalQuantity(fable, fd, status);
-    TEST_ASSERT_STATUS(status);
+    assertSuccess(WHERE, status);
     ASSERT_EQUAL(22, fd.getPluralOperand(PLURAL_OPERAND_V));
     ASSERT_EQUAL(3456789012345678900LL, fd.getPluralOperand(PLURAL_OPERAND_F));
     ASSERT_EQUAL(34567890123456789LL, fd.getPluralOperand(PLURAL_OPERAND_T));
@@ -845,9 +863,9 @@ void IntlTestDecimalFormatAPI::TestFixedDecimal() {
 
     // On field overflow, Integer part is truncated on the left, fraction part on the right.
     fable.setDecimalNumber("123456789012345678901234567890.123456789012345678901234567890", status);
-    TEST_ASSERT_STATUS(status);
+    assertSuccess(WHERE, status);
     df->formatToDecimalQuantity(fable, fd, status);
-    TEST_ASSERT_STATUS(status);
+    assertSuccess(WHERE, status);
     ASSERT_EQUAL(22, fd.getPluralOperand(PLURAL_OPERAND_V));
     ASSERT_EQUAL(1234567890123456789LL, fd.getPluralOperand(PLURAL_OPERAND_F));
     ASSERT_EQUAL(1234567890123456789LL, fd.getPluralOperand(PLURAL_OPERAND_T));
@@ -857,9 +875,9 @@ void IntlTestDecimalFormatAPI::TestFixedDecimal() {
 
     // Digits way to the right of the decimal but within the format's precision aren't truncated
     fable.setDecimalNumber("1.0000000000000000000012", status);
-    TEST_ASSERT_STATUS(status);
+    assertSuccess(WHERE, status);
     df->formatToDecimalQuantity(fable, fd, status);
-    TEST_ASSERT_STATUS(status);
+    assertSuccess(WHERE, status);
     ASSERT_EQUAL(22, fd.getPluralOperand(PLURAL_OPERAND_V));
     ASSERT_EQUAL(12, fd.getPluralOperand(PLURAL_OPERAND_F));
     ASSERT_EQUAL(12, fd.getPluralOperand(PLURAL_OPERAND_T));
@@ -869,9 +887,9 @@ void IntlTestDecimalFormatAPI::TestFixedDecimal() {
 
     // Digits beyond the precision of the format are rounded away
     fable.setDecimalNumber("1.000000000000000000000012", status);
-    TEST_ASSERT_STATUS(status);
+    assertSuccess(WHERE, status);
     df->formatToDecimalQuantity(fable, fd, status);
-    TEST_ASSERT_STATUS(status);
+    assertSuccess(WHERE, status);
     ASSERT_EQUAL(2, fd.getPluralOperand(PLURAL_OPERAND_V));
     ASSERT_EQUAL(0, fd.getPluralOperand(PLURAL_OPERAND_F));
     ASSERT_EQUAL(0, fd.getPluralOperand(PLURAL_OPERAND_T));
@@ -881,9 +899,9 @@ void IntlTestDecimalFormatAPI::TestFixedDecimal() {
 
     // Negative numbers come through
     fable.setDecimalNumber("-1.0000000000000000000012", status);
-    TEST_ASSERT_STATUS(status);
+    assertSuccess(WHERE, status);
     df->formatToDecimalQuantity(fable, fd, status);
-    TEST_ASSERT_STATUS(status);
+    assertSuccess(WHERE, status);
     ASSERT_EQUAL(22, fd.getPluralOperand(PLURAL_OPERAND_V));
     ASSERT_EQUAL(12, fd.getPluralOperand(PLURAL_OPERAND_F));
     ASSERT_EQUAL(12, fd.getPluralOperand(PLURAL_OPERAND_T));
@@ -893,9 +911,9 @@ void IntlTestDecimalFormatAPI::TestFixedDecimal() {
 
     // MinFractionDigits from format larger than from number.
     fable.setDecimalNumber("1000000000000000000000.3", status);
-    TEST_ASSERT_STATUS(status);
+    assertSuccess(WHERE, status);
     df->formatToDecimalQuantity(fable, fd, status);
-    TEST_ASSERT_STATUS(status);
+    assertSuccess(WHERE, status);
     ASSERT_EQUAL(2, fd.getPluralOperand(PLURAL_OPERAND_V));
     ASSERT_EQUAL(30, fd.getPluralOperand(PLURAL_OPERAND_F));
     ASSERT_EQUAL(3, fd.getPluralOperand(PLURAL_OPERAND_T));
@@ -904,9 +922,9 @@ void IntlTestDecimalFormatAPI::TestFixedDecimal() {
     ASSERT_EQUAL(FALSE, fd.isNegative());
 
     fable.setDecimalNumber("1000000000000000050000.3", status);
-    TEST_ASSERT_STATUS(status);
+    assertSuccess(WHERE, status);
     df->formatToDecimalQuantity(fable, fd, status);
-    TEST_ASSERT_STATUS(status);
+    assertSuccess(WHERE, status);
     ASSERT_EQUAL(2, fd.getPluralOperand(PLURAL_OPERAND_V));
     ASSERT_EQUAL(30, fd.getPluralOperand(PLURAL_OPERAND_F));
     ASSERT_EQUAL(3, fd.getPluralOperand(PLURAL_OPERAND_T));
@@ -916,9 +934,9 @@ void IntlTestDecimalFormatAPI::TestFixedDecimal() {
 
     // Test some int64_t values that are out of the range of a double
     fable.setInt64(4503599627370496LL);
-    TEST_ASSERT_STATUS(status);
+    assertSuccess(WHERE, status);
     df->formatToDecimalQuantity(fable, fd, status);
-    TEST_ASSERT_STATUS(status);
+    assertSuccess(WHERE, status);
     ASSERT_EQUAL(2, fd.getPluralOperand(PLURAL_OPERAND_V));
     ASSERT_EQUAL(0, fd.getPluralOperand(PLURAL_OPERAND_F));
     ASSERT_EQUAL(0, fd.getPluralOperand(PLURAL_OPERAND_T));
@@ -927,9 +945,9 @@ void IntlTestDecimalFormatAPI::TestFixedDecimal() {
     ASSERT_EQUAL(FALSE, fd.isNegative());
 
     fable.setInt64(4503599627370497LL);
-    TEST_ASSERT_STATUS(status);
+    assertSuccess(WHERE, status);
     df->formatToDecimalQuantity(fable, fd, status);
-    TEST_ASSERT_STATUS(status);
+    assertSuccess(WHERE, status);
     ASSERT_EQUAL(2, fd.getPluralOperand(PLURAL_OPERAND_V));
     ASSERT_EQUAL(0, fd.getPluralOperand(PLURAL_OPERAND_F));
     ASSERT_EQUAL(0, fd.getPluralOperand(PLURAL_OPERAND_T));
@@ -938,28 +956,23 @@ void IntlTestDecimalFormatAPI::TestFixedDecimal() {
     ASSERT_EQUAL(FALSE, fd.isNegative());
 
     fable.setInt64(9223372036854775807LL);
-    TEST_ASSERT_STATUS(status);
+    assertSuccess(WHERE, status);
     df->formatToDecimalQuantity(fable, fd, status);
-    TEST_ASSERT_STATUS(status);
+    assertSuccess(WHERE, status);
     ASSERT_EQUAL(2, fd.getPluralOperand(PLURAL_OPERAND_V));
     ASSERT_EQUAL(0, fd.getPluralOperand(PLURAL_OPERAND_F));
     ASSERT_EQUAL(0, fd.getPluralOperand(PLURAL_OPERAND_T));
     // note: going through DigitList path to FixedDecimal, which is trimming
     //       int64_t fields to 18 digits. See ticket Ticket #10374
-    // ASSERT_EQUAL(223372036854775807LL, fd.getPluralOperand(PLURAL_OPERAND_I);
-    if (!(
-            fd.getPluralOperand(PLURAL_OPERAND_I) == 223372036854775807LL ||
-            fd.getPluralOperand(PLURAL_OPERAND_I) == 9223372036854775807LL)) {
-        dataerrln(
-                "File %s, Line %d, fd.getPluralOperand(PLURAL_OPERAND_I = %lld",
-                __FILE__,
-                __LINE__,
-                fd.getPluralOperand(PLURAL_OPERAND_I));
-    }
+    ASSERT_EQUAL(223372036854775807LL, fd.getPluralOperand(PLURAL_OPERAND_I));
     ASSERT_EQUAL(TRUE, fd.hasIntegerValue());
     ASSERT_EQUAL(FALSE, fd.isNegative());
 
 }
+#if defined(_MSC_VER)
+// Re-enable 4805 warnings (comparisons between int and bool).
+#pragma warning(pop)
+#endif
 
 void IntlTestDecimalFormatAPI::TestBadFastpath() {
     UErrorCode status = U_ZERO_ERROR;
@@ -1028,11 +1041,6 @@ void IntlTestDecimalFormatAPI::TestRequiredDecimalPoint() {
     }
 }
 
-// WHERE Macro yields a literal string of the form "source_file_name:line number "
-#define WHERE __FILE__ ":" XLINE(__LINE__) " "
-#define XLINE(s) LINE(s)
-#define LINE(s) #s
-
 void IntlTestDecimalFormatAPI::testErrorCode() {
     // Try each DecimalFormat constructor with an errorCode set on input,
     // Verify no crashes or leaks, and that the errorCode is not altered.
@@ -1075,7 +1083,7 @@ void IntlTestDecimalFormatAPI::testErrorCode() {
     }
 
     // Try each DecimalFormat method with an error code parameter, verifying that
-    //  an input error is not altered.
+    //  an input error is not altered, and that no segmentation faults occur.
 
     status = U_INTERNAL_PROGRAM_ERROR;
     DecimalFormat dfBogus(status);
@@ -1135,6 +1143,244 @@ void IntlTestDecimalFormatAPI::testErrorCode() {
         status = U_INTERNAL_PROGRAM_ERROR;
         df->setCurrencyUsage(UCURR_USAGE_CASH, &status);
         assertEquals(WHERE, U_INTERNAL_PROGRAM_ERROR, status);
+    }
+}
+
+void IntlTestDecimalFormatAPI::testInvalidObject() {
+    {
+        UErrorCode status = U_INTERNAL_PROGRAM_ERROR;
+        DecimalFormat dfBogus(status);
+        assertEquals(WHERE, U_INTERNAL_PROGRAM_ERROR, status);
+
+        status = U_ZERO_ERROR;
+        DecimalFormat dfGood(status);
+        assertSuccess(WHERE, status);
+
+        // An invalid object should not be equal to a valid object.
+        // This also tests that no segmentation fault occurs in the comparison operator due
+        // to any dangling/nullptr pointers. (ICU-20381).
+        assertTrue(WHERE, dfGood != dfBogus);
+
+        status = U_MEMORY_ALLOCATION_ERROR;
+        DecimalFormat dfBogus2(status);
+        assertEquals(WHERE, U_MEMORY_ALLOCATION_ERROR, status);
+
+        // Two invalid objects should not be equal.
+        // (Also verify that nullptr isn't t dereferenced in the comparision operator.)
+        assertTrue(WHERE, dfBogus != dfBogus2);
+
+        // Verify the comparison operator works for two valid objects.
+        status = U_ZERO_ERROR;
+        DecimalFormat dfGood2(status);
+        assertSuccess(WHERE, status);
+        assertTrue(WHERE, dfGood == dfGood2);
+
+        // Verify that the assignment operator sets the object to an invalid state, and
+        // that no segmentation fault occurs due to any dangling/nullptr pointers.
+        status = U_INTERNAL_PROGRAM_ERROR;
+        DecimalFormat dfAssignmentBogus = DecimalFormat(status);
+        // Verify comparison for the assigned object.
+        assertTrue(WHERE, dfAssignmentBogus != dfGood);
+        assertTrue(WHERE, dfAssignmentBogus != dfGood2);
+        assertTrue(WHERE, dfAssignmentBogus != dfBogus);
+
+        // Verify that cloning our original invalid object gives nullptr.
+        auto dfBogusClone = dfBogus.clone();
+        assertTrue(WHERE,  dfBogusClone == nullptr);
+        // Verify that cloning our assigned invalid object gives nullptr.
+        auto dfBogusClone2 = dfAssignmentBogus.clone();
+        assertTrue(WHERE, dfBogusClone2 == nullptr);
+
+        // Verify copy constructing from an invalid object is also invalid.
+        DecimalFormat dfCopy(dfBogus);
+        assertTrue(WHERE, dfCopy != dfGood);
+        assertTrue(WHERE, dfCopy != dfGood2);
+        assertTrue(WHERE, dfCopy != dfBogus);
+        DecimalFormat dfCopyAssign = dfBogus;
+        assertTrue(WHERE, dfCopyAssign != dfGood);
+        assertTrue(WHERE, dfCopyAssign != dfGood2);
+        assertTrue(WHERE, dfCopyAssign != dfBogus);
+        auto dfBogusCopyClone1 = dfCopy.clone();
+        auto dfBogusCopyClone2 = dfCopyAssign.clone();
+        assertTrue(WHERE, dfBogusCopyClone1 == nullptr);
+        assertTrue(WHERE, dfBogusCopyClone2 == nullptr);
+    }
+
+    {
+        // Try each DecimalFormat class method that lacks an error code parameter, verifying
+        // we don't crash (segmentation fault) on invalid objects.
+
+        UErrorCode status = U_ZERO_ERROR;
+        const UnicodeString pattern(u"0.###E0");
+        UParseError pe;
+        DecimalFormatSymbols symbols(Locale::getUS(), status);
+        assertSuccess(WHERE, status);
+        CurrencyPluralInfo currencyPI(status);
+        assertSuccess(WHERE, status);
+
+        status = U_INTERNAL_PROGRAM_ERROR;
+        DecimalFormat dfBogus1(status);
+        assertEquals(WHERE, U_INTERNAL_PROGRAM_ERROR, status);
+
+        status = U_INTERNAL_PROGRAM_ERROR;
+        DecimalFormat dfBogus2(pattern, status);
+        assertEquals(WHERE, U_INTERNAL_PROGRAM_ERROR, status);
+
+        status = U_INTERNAL_PROGRAM_ERROR;
+        DecimalFormat dfBogus3(pattern, new DecimalFormatSymbols(symbols), status);
+        assertEquals(WHERE, U_INTERNAL_PROGRAM_ERROR, status);
+
+        status = U_INTERNAL_PROGRAM_ERROR;
+        DecimalFormat dfBogus4(pattern, new DecimalFormatSymbols(symbols), UNumberFormatStyle::UNUM_CURRENCY, status);
+        assertEquals(WHERE, U_INTERNAL_PROGRAM_ERROR, status);
+
+        status = U_INTERNAL_PROGRAM_ERROR;
+        DecimalFormat dfBogus5(pattern, new DecimalFormatSymbols(symbols), pe, status);
+        assertEquals(WHERE, U_INTERNAL_PROGRAM_ERROR, status);
+
+        for (DecimalFormat *df : {&dfBogus1, &dfBogus2, &dfBogus3, &dfBogus4, &dfBogus5})
+        {
+            df->setGroupingUsed(true);
+
+            df->setParseIntegerOnly(false);
+
+            df->setLenient(true);
+
+            auto dfClone = df->clone();
+            assertTrue(WHERE, dfClone == nullptr);
+
+            UnicodeString dest;
+            FieldPosition fp;
+            df->format(1.2, dest, fp);
+            df->format(static_cast<int32_t>(1234), dest, fp);
+            df->format(static_cast<int64_t>(1234), dest, fp);
+
+            UnicodeString text("-1,234.00");
+            Formattable result;
+            ParsePosition pos(0);
+            df->parse(text, result, pos);
+
+            CurrencyAmount* ca = df->parseCurrency(text, pos);
+            assertTrue(WHERE, ca == nullptr);
+
+            const DecimalFormatSymbols* dfs = df->getDecimalFormatSymbols();
+            assertTrue(WHERE, dfs == nullptr);
+
+            df->adoptDecimalFormatSymbols(nullptr);
+
+            df->setDecimalFormatSymbols(symbols);
+
+            const CurrencyPluralInfo* cpi = df->getCurrencyPluralInfo();
+            assertTrue(WHERE, cpi == nullptr);
+            
+            df->adoptCurrencyPluralInfo(nullptr);
+
+            df->setCurrencyPluralInfo(currencyPI);
+
+            UnicodeString prefix("-123");
+            df->getPositivePrefix(dest);
+            df->setPositivePrefix(prefix);
+            df->getNegativePrefix(dest);
+            df->setNegativePrefix(prefix);
+            df->getPositiveSuffix(dest);
+            df->setPositiveSuffix(prefix);
+            df->getNegativeSuffix(dest);
+            df->setNegativeSuffix(prefix);
+
+            df->isSignAlwaysShown();
+
+            df->setSignAlwaysShown(true);
+
+            df->getMultiplier();
+            df->setMultiplier(10);
+            
+            df->getMultiplierScale();
+            df->setMultiplierScale(2);
+
+            df->getRoundingIncrement();
+            df->setRoundingIncrement(1.2);
+
+            df->getRoundingMode();
+            df->setRoundingMode(DecimalFormat::ERoundingMode::kRoundDown);
+
+            df->getFormatWidth();
+            df->setFormatWidth(0);
+
+            UnicodeString pad(" ");
+            df->getPadCharacterString();
+            df->setPadCharacter(pad);
+
+            df->getPadPosition();
+            df->setPadPosition(DecimalFormat::EPadPosition::kPadBeforePrefix);
+
+            df->isScientificNotation();
+            df->setScientificNotation(false);
+
+            df->getMinimumExponentDigits();
+            df->setMinimumExponentDigits(1);
+
+            df->isExponentSignAlwaysShown();
+            df->setExponentSignAlwaysShown(true);
+
+            df->getGroupingSize();
+            df->setGroupingSize(3);
+
+            df->getSecondaryGroupingSize();
+            df->setSecondaryGroupingSize(-1);
+
+            df->getMinimumGroupingDigits();
+            df->setMinimumGroupingDigits(-1);
+
+            df->isDecimalSeparatorAlwaysShown();
+            df->setDecimalSeparatorAlwaysShown(true);
+
+            df->isDecimalPatternMatchRequired();
+            df->setDecimalPatternMatchRequired(false);
+
+            df->isParseNoExponent();
+            df->setParseNoExponent(true);
+
+            df->isParseCaseSensitive();
+            df->setParseCaseSensitive(false);
+
+            df->isFormatFailIfMoreThanMaxDigits();
+            df->setFormatFailIfMoreThanMaxDigits(true);
+
+            df->toPattern(dest);
+            df->toLocalizedPattern(dest);
+
+            df->setMaximumIntegerDigits(10);
+            df->setMinimumIntegerDigits(0);
+
+            df->setMaximumFractionDigits(2);
+            df->setMinimumFractionDigits(0);
+
+            df->getMinimumSignificantDigits();
+            df->setMinimumSignificantDigits(0);
+
+            df->getMaximumSignificantDigits();
+            df->setMaximumSignificantDigits(5);
+
+            df->areSignificantDigitsUsed();
+            df->setSignificantDigitsUsed(true);
+
+            df->setCurrency(u"USD");
+            
+            df->getCurrencyUsage();
+
+            const number::LocalizedNumberFormatter* lnf = df->toNumberFormatter(status);
+            assertEquals("toNumberFormatter should return nullptr",
+                (int64_t) nullptr, (int64_t) lnf);
+
+            // Should not crash when chaining to error code enabled methods on the LNF
+            lnf->formatInt(1, status);
+            lnf->formatDouble(1.0, status);
+            lnf->formatDecimal("1", status);
+            lnf->toFormat(status);
+            lnf->toSkeleton(status);
+            lnf->copyErrorTo(status);
+        }
+
     }
 }
 

@@ -1244,6 +1244,8 @@ enumDefaultsRange(const void *context, UChar32 start, UChar32 limit, UCharCatego
         { 0x1E800, U_LEFT_TO_RIGHT },  /* new default-R range in Unicode 5.2: U+1E800 - U+1EFFF */
         { 0x1EC70, U_RIGHT_TO_LEFT },  // Unicode 11 changes U+1EC70..U+1ECBF from R to AL.
         { 0x1ECC0, U_RIGHT_TO_LEFT_ARABIC },
+        { 0x1ED00, U_RIGHT_TO_LEFT },  // Unicode 12 changes U+1ED00..U+1ED4F from R to AL.
+        { 0x1ED50, U_RIGHT_TO_LEFT_ARABIC },
         { 0x1EE00, U_RIGHT_TO_LEFT },
         { 0x1EF00, U_RIGHT_TO_LEFT_ARABIC },  /* Unicode 6.1 changes U+1EE00..U+1EEFF from R to AL */
         { 0x1F000, U_RIGHT_TO_LEFT },
@@ -2003,29 +2005,62 @@ TestCharNames() {
 static void
 TestUCharFromNameUnderflow() {
     // Ticket #10889: Underflow crash when there is no dash.
+    const char *name="<NO BREAK SPACE>";
     UErrorCode errorCode=U_ZERO_ERROR;
-    UChar32 c=u_charFromName(U_EXTENDED_CHAR_NAME, "<NO BREAK SPACE>", &errorCode);
+    UChar32 c=u_charFromName(U_EXTENDED_CHAR_NAME, name, &errorCode);
     if(U_SUCCESS(errorCode)) {
-        log_err("u_charFromName(<NO BREAK SPACE>) = U+%04x but should fail - %s\n", c, u_errorName(errorCode));
+        log_err("u_charFromName(%s) = U+%04x but should fail - %s\n",
+                name, c, u_errorName(errorCode));
     }
 
     // Test related edge cases.
+    name="<-00a0>";
     errorCode=U_ZERO_ERROR;
-    c=u_charFromName(U_EXTENDED_CHAR_NAME, "<-00a0>", &errorCode);
+    c=u_charFromName(U_EXTENDED_CHAR_NAME, name, &errorCode);
     if(U_SUCCESS(errorCode)) {
-        log_err("u_charFromName(<-00a0>) = U+%04x but should fail - %s\n", c, u_errorName(errorCode));
+        log_err("u_charFromName(%s) = U+%04x but should fail - %s\n",
+                name, c, u_errorName(errorCode));
     }
 
     errorCode=U_ZERO_ERROR;
-    c=u_charFromName(U_EXTENDED_CHAR_NAME, "<control->", &errorCode);
+    name="<control->";
+    c=u_charFromName(U_EXTENDED_CHAR_NAME, name, &errorCode);
     if(U_SUCCESS(errorCode)) {
-        log_err("u_charFromName(<control->) = U+%04x but should fail - %s\n", c, u_errorName(errorCode));
+        log_err("u_charFromName(%s) = U+%04x but should fail - %s\n",
+                name, c, u_errorName(errorCode));
     }
 
     errorCode=U_ZERO_ERROR;
-    c=u_charFromName(U_EXTENDED_CHAR_NAME, "<control-111111>", &errorCode);
+    name="<control-111111>";
+    c=u_charFromName(U_EXTENDED_CHAR_NAME, name, &errorCode);
     if(U_SUCCESS(errorCode)) {
-        log_err("u_charFromName(<control-111111>) = U+%04x but should fail - %s\n", c, u_errorName(errorCode));
+        log_err("u_charFromName(%s) = U+%04x but should fail - %s\n",
+                name, c, u_errorName(errorCode));
+    }
+
+    // ICU-20292: integer overflow
+    errorCode=U_ZERO_ERROR;
+    name="<noncharacter-10010FFFF>";
+    c=u_charFromName(U_EXTENDED_CHAR_NAME, name, &errorCode);
+    if(U_SUCCESS(errorCode)) {
+        log_err("u_charFromName(%s) = U+%04x but should fail - %s\n",
+                name, c, u_errorName(errorCode));
+    }
+
+    errorCode=U_ZERO_ERROR;
+    name="<noncharacter-00010FFFF>";  // too many digits even if only leading 0s
+    c=u_charFromName(U_EXTENDED_CHAR_NAME, name, &errorCode);
+    if(U_SUCCESS(errorCode)) {
+        log_err("u_charFromName(%s) = U+%04x but should fail - %s\n",
+                name, c, u_errorName(errorCode));
+    }
+
+    errorCode=U_ZERO_ERROR;
+    name="<noncharacter-fFFf>>";
+    c=u_charFromName(U_EXTENDED_CHAR_NAME, name, &errorCode);
+    if(U_SUCCESS(errorCode)) {
+        log_err("u_charFromName(%s) = U+%04x but should fail - %s\n",
+                name, c, u_errorName(errorCode));
     }
 }
 
