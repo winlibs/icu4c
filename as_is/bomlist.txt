@@ -88,8 +88,8 @@ icu/source/test/testdata/break_rules/line_normal.txt
 icu/source/test/testdata/break_rules/line_loose.txt
 icu/source/test/testdata/break_rules/line_loose_cj.txt
 icu/source/test/testdata/break_rules/word.txt
+icu/source/test/testdata/break_rules/README.md
 icu/source/test/testdata/break_rules/line.txt
-icu/source/test/testdata/break_rules/readme.txt
 icu/source/test/testdata/break_rules/word_POSIX.txt
 icu/source/test/testdata/break_rules/sentence.txt
 icu/source/test/testdata/break_rules/line_normal_cj.txt

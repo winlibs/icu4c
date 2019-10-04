@@ -20,7 +20,7 @@ system_symbols:
     c_strings c_string_formatting
     int_functions floating_point trigonometry
     stdlib_qsort
-    pthread system_locale
+    system_locale
     stdio_input stdio_output file_io readlink_function dir_io mmap_functions dlfcn
     # C++
     cplusplus iostream
@@ -82,10 +82,6 @@ group: trigonometry
 group: stdlib_qsort
     qsort
 
-group: pthread
-    pthread_mutex_init pthread_mutex_destroy pthread_mutex_lock pthread_mutex_unlock
-    pthread_cond_wait pthread_cond_broadcast pthread_cond_signal
-
 group: system_locale
     getenv
     nl_langinfo setlocale newlocale freelocale
@@ -94,7 +90,7 @@ group: system_locale
 group: stdio_input
     fopen fclose fgets fread fseek ftell rewind feof fileno
     # Additional symbols in an optimized build.
-    __fgets_chk __fread_chk
+    __fgets_chk __fread_chk fread_unlocked
 
 group: stdio_output
     fflush fwrite
@@ -188,7 +184,7 @@ library: common
     uinit utypes errorcode
     icuplug
     platform
-    localebuilder
+    localebuilder localematcher
 
 group: pluralmap
     # TODO: Move to i18n library, ticket #11926.
@@ -635,7 +631,7 @@ group: resourcebundle
     # We can probably only disentangle basic locale ID handling from resource bundle code
     # by hardcoding all of the locale ID data.
     locid.o locmap.o wintz.o
-    # Do we need class LocaleBased? http://bugs.icu-project.org/trac/ticket/8608
+    # Do we need class LocaleBased? https://unicode-org.atlassian.net/browse/ICU-8608
     locbased.o
     loclikely.o
   deps
@@ -643,18 +639,45 @@ group: resourcebundle
     sort stringenumeration uhash uvector
     uscript_props propname
     bytesinkutil
+    errorcode
 
 group: localebuilder
     localebuilder.o
   deps
     resourcebundle
 
+group: localematcher
+    localematcher.o
+  deps
+    localebuilder localeprioritylist loclikelysubtags locdistance lsr
+
+group: localeprioritylist
+    localeprioritylist.o
+  deps
+    resourcebundle
+
+group: locdistance
+    locdistance.o
+  deps
+    loclikelysubtags
+
+group: loclikelysubtags
+    loclikelysubtags.o
+  deps
+    lsr resourcebundle
+
+group: lsr
+    lsr.o
+  deps
+    platform
+
 group: udata
-    udata.o ucmndata.o udatamem.o
+    udata.o ucmndata.o udatamem.o restrace.o
     umapfile.o
   deps
     uhash platform stubdata
     file_io mmap_functions
+    icu_utility
 
 group: unifiedcache
     unifiedcache.o
@@ -831,7 +854,7 @@ group: platform
     # The "platform" group has no ICU dependencies.
     PIC system_misc system_debug malloc_functions ubsan
     c_strings c_string_formatting
-    floating_point pthread system_locale
+    floating_point system_locale
     stdio_input readlink_function dir_io
     dlfcn  # Move related code into icuplug.c?
     cplusplus
@@ -853,7 +876,7 @@ library: i18n
 group: region
     region.o uregion.o
   deps
-    formatting  # Temporary, TODO: Ticket #9982 class Region should use low-level ASCII-integer functions, and probably be moved to the common library.
+    icu_utility
     resourcebundle
     uvector uclean_i18n
 
@@ -925,14 +948,17 @@ group: listformatter
     resourcebundle simpleformatter format uclean_i18n formatted_value_iterimpl
 
 group: double_conversion
-    double-conversion.o double-conversion-bignum.o double-conversion-bignum-dtoa.o
-    double-conversion-cached-powers.o double-conversion-diy-fp.o
-    double-conversion-fast-dtoa.o double-conversion-strtod.o
+    double-conversion-bignum.o double-conversion-double-to-string.o
+    double-conversion-bignum-dtoa.o double-conversion-cached-powers.o
+    double-conversion-string-to-double.o double-conversion-fast-dtoa.o
+    double-conversion-strtod.o
   deps
     platform
 
 group: number_representation
-    number_decimalquantity.o number_stringbuilder.o numparse_stringsegment.o number_utils.o
+    number_decimalquantity.o string_segment.o number_utils.o
+    # TODO(ICU-20429) Move formatted_string_builder to its own unit.
+    formatted_string_builder.o
   deps
     decnumber double_conversion
     # for trimming whitespace around fields
@@ -1020,6 +1046,7 @@ group: formatting
     trigonometry  # for astro.o
     sharedbreakiterator # for reldatefmt.o
     uclean_i18n
+    region
 
 group: sharedbreakiterator
     sharedbreakiterator.o
