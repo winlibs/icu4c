@@ -43,6 +43,7 @@ void IntlTestDateTimePatternGeneratorAPI::runIndexedTest( int32_t index, UBool e
         TESTCASE(7, testJjMapping);
         TESTCASE(8, test20640_HourCyclArsEnNH);
         TESTCASE(9, testFallbackWithDefaultRootLocale);
+        TESTCASE(10, testGetDefaultHourCycle_OnEmptyInstance);
         default: name = ""; break;
     }
 }
@@ -1410,18 +1411,19 @@ void IntlTestDateTimePatternGeneratorAPI::test20640_HourCyclArsEnNH() {
         const char* localeName;
         const char16_t* expectedDtpgPattern;
         const char16_t* expectedTimePattern;
+        UDateFormatHourCycle expectedDefaultHourCycle;
     } cases[] = {
         // ars is interesting because it does not have a region, but it aliases
         // to ar_SA, which has a region.
-        {"ars", u"h a", u"h:mm a"},
+        {"ars", u"h a", u"h:mm a", UDAT_HOUR_CYCLE_12},
         // en_NH is interesting because NH is a deprecated region code;
         // formerly New Hebrides, now Vanuatu => VU => h.
-        {"en_NH", u"h a", u"h:mm a"},
+        {"en_NH", u"h a", u"h:mm a", UDAT_HOUR_CYCLE_12},
         // ch_ZH is a typo (should be zh_CN), but we should fail gracefully.
         // {"cn_ZH", u"HH", u"H:mm"}, // TODO(ICU-20653): Desired behavior
-        {"cn_ZH", u"HH", u"h:mm a"}, // Actual behavior
+        {"cn_ZH", u"HH", u"h:mm a", UDAT_HOUR_CYCLE_23 }, // Actual behavior
         // a non-BCP47 locale without a country code should not fail
-        {"ja_TRADITIONAL", u"H時", u"H:mm"},
+        {"ja_TRADITIONAL", u"H時", u"H:mm", UDAT_HOUR_CYCLE_23},
     };
 
     for (auto& cas : cases) {
@@ -1440,11 +1442,17 @@ void IntlTestDateTimePatternGeneratorAPI::test20640_HourCyclArsEnNH() {
         if (status.errIfFailureAndReset()) {
             return;
         }
+        UDateFormatHourCycle defaultHourCycle = dtpg->getDefaultHourCycle(status);
+        if (status.errIfFailureAndReset()) {
+            return;
+        }
 
         assertEquals(UnicodeString("dtpgPattern ") + cas.localeName,
             cas.expectedDtpgPattern, dtpgPattern);
         assertEquals(UnicodeString("timePattern ") + cas.localeName,
             cas.expectedTimePattern, timePattern);
+        assertEquals(UnicodeString("defaultHour ") + cas.localeName,
+            cas.expectedDefaultHourCycle, defaultHourCycle);
     }
 
 }
@@ -1473,6 +1481,29 @@ void IntlTestDateTimePatternGeneratorAPI::testFallbackWithDefaultRootLocale() {
     uloc_setDefault(original, &status);
     if (U_FAILURE(status)) {
         errln("ERROR: Failed to change the default locale back to %s\n", original);
+    }
+}
+
+// ICU-21000 Ensure that calling getDefaultHourCycle on an empty instance doesn't call UPRV_UNREACHABLE/abort.
+void IntlTestDateTimePatternGeneratorAPI::testGetDefaultHourCycle_OnEmptyInstance() {
+    UErrorCode status = U_ZERO_ERROR;
+
+    LocalPointer<DateTimePatternGenerator> dtpg(DateTimePatternGenerator::createEmptyInstance(status), status);
+    if (U_FAILURE(status)) {
+        errln("ERROR: createEmptyInstance failed, status: %s", u_errorName(status));
+        return;
+    }
+    (void)dtpg->getDefaultHourCycle(status);
+    if (!U_FAILURE(status)) {
+        errln("ERROR: expected getDefaultHourCycle on an empty instance to fail, status: %s", u_errorName(status));
+        return;
+    }
+
+    status = U_USELESS_COLLATOR_ERROR;
+    (void)dtpg->getDefaultHourCycle(status);
+    if (status != U_USELESS_COLLATOR_ERROR) {
+        errln("ERROR: getDefaultHourCycle shouldn't modify status if it is already failed, status: %s", u_errorName(status));
+        return;
     }
 }
 

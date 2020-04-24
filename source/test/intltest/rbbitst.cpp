@@ -14,6 +14,7 @@
 #include "unicode/utypes.h"
 #if !UCONFIG_NO_BREAK_ITERATION
 
+#include <sstream>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -35,6 +36,7 @@
 #include "unicode/uscript.h"
 #include "unicode/ustring.h"
 #include "unicode/utext.h"
+#include "unicode/utrace.h"
 
 #include "charstr.h"
 #include "cmemory.h"
@@ -125,6 +127,20 @@ void RBBITest::runIndexedTest( int32_t index, UBool exec, const char* &name, cha
     TESTCASE_AUTO(TestBug13447);
     TESTCASE_AUTO(TestReverse);
     TESTCASE_AUTO(TestBug13692);
+    TESTCASE_AUTO(TestDebugRules);
+
+#if U_ENABLE_TRACING
+    TESTCASE_AUTO(TestTraceCreateCharacter);
+    TESTCASE_AUTO(TestTraceCreateWord);
+    TESTCASE_AUTO(TestTraceCreateSentence);
+    TESTCASE_AUTO(TestTraceCreateTitle);
+    TESTCASE_AUTO(TestTraceCreateLine);
+    TESTCASE_AUTO(TestTraceCreateLineNormal);
+    TESTCASE_AUTO(TestTraceCreateLineLoose);
+    TESTCASE_AUTO(TestTraceCreateLineStrict);
+    TESTCASE_AUTO(TestTraceCreateBreakEngine);
+#endif
+
     TESTCASE_AUTO_END;
 }
 
@@ -1623,8 +1639,9 @@ std::string RBBIMonkeyKind::classNameFromCodepoint(const UChar32 c) {
 unsigned int RBBIMonkeyKind::maxClassNameSize() {
     unsigned int maxSize = 0;
     for (int aClassNum = 0; aClassNum < charClasses()->size(); aClassNum++) {
-        if (classNames[aClassNum].size() > maxSize) {
-            maxSize = classNames[aClassNum].size();
+        auto aClassNumSize = static_cast<unsigned int>(classNames[aClassNum].size());
+        if (aClassNumSize > maxSize) {
+            maxSize = aClassNumSize;
         }
     }
     return maxSize;
@@ -4268,7 +4285,7 @@ void RBBITest::RunMonkey(BreakIterator *bi, RBBIMonkeyKind &mk, const char *name
                     u_charName(c, U_EXTENDED_CHAR_NAME, cName, sizeof(cName), &status);
 
                     char buffer[200];
-                    snprintf(buffer, 200,
+                    auto ret = snprintf(buffer, UPRV_LENGTHOF(buffer),
                              "%4s %3i :  %1s  %1s  %10s  %-*s  %-40s  %-40s",
                              currentLineFlag.c_str(),
                              ci,
@@ -4278,6 +4295,8 @@ void RBBITest::RunMonkey(BreakIterator *bi, RBBIMonkeyKind &mk, const char *name
                              classNameSize,
                              mk.classNameFromCodepoint(c).c_str(),
                              mk.getAppliedRule(ci).c_str(), cName);
+                    (void)ret;
+                    U_ASSERT(0 <= ret && ret < UPRV_LENGTHOF(buffer));
 
                     // Output the error
                     if (ci == i) {
@@ -4783,6 +4802,19 @@ void RBBITest::TestBug13692() {
     assertSuccess(WHERE, status);
 }
 
+
+void RBBITest::TestProperties() {
+    UErrorCode errorCode = U_ZERO_ERROR;
+    UnicodeSet prependSet(UNICODE_STRING_SIMPLE("[:GCB=Prepend:]"), errorCode);
+    if (!prependSet.isEmpty()) {
+        errln(
+            "[:GCB=Prepend:] is not empty any more. "
+            "Uncomment relevant lines in source/data/brkitr/char.txt and "
+            "change this test to the opposite condition.");
+    }
+}
+
+
 //
 //  TestDebug    -  A place-holder test for debugging purposes.
 //                  For putting in fragments of other tests that can be invoked
@@ -4801,15 +4833,232 @@ void RBBITest::TestDebug(void) {
     assertSuccess(WHERE, status);
 }
 
-void RBBITest::TestProperties() {
-    UErrorCode errorCode = U_ZERO_ERROR;
-    UnicodeSet prependSet(UNICODE_STRING_SIMPLE("[:GCB=Prepend:]"), errorCode);
-    if (!prependSet.isEmpty()) {
-        errln(
-            "[:GCB=Prepend:] is not empty any more. "
-            "Uncomment relevant lines in source/data/brkitr/char.txt and "
-            "change this test to the opposite condition.");
+
+//
+//  TestDebugRules   A stub test for use in debugging rule compilation problems.
+//                   Can be freely altered as needed or convenient.
+//                   Leave disabled - #ifdef'ed out - when not activley debugging. The rule source
+//                   data files may not be available in all environments.
+//                   Any permanent test cases should be moved to rbbitst.txt
+//                   (see Bug 20303 in that file, for example), or to another test function in this file.
+//
+void RBBITest::TestDebugRules() {
+#if 0
+    const char16_t *rules = u""
+        "!!quoted_literals_only; \n"
+        "!!chain; \n"
+        "!!lookAheadHardBreak; \n"
+        " \n"
+        // "[a] / ; \n"
+        "[a] [b] / [c] [d]; \n"
+        "[a] [b] / [c] [d] {100}; \n"
+        "[x] [a] [b] / [c] [d] {100}; \n"
+        "[a] [b] [c] / [d] {100}; \n"
+        //" [c] [d] / [e] [f]; \n"
+        //"[a] [b] / [c]; \n"
+        ;
+
+    UErrorCode status = U_ZERO_ERROR;
+    CharString path(pathToDataDirectory(), status);
+    path.appendPathPart("brkitr", status);
+    path.appendPathPart("rules", status);
+    path.appendPathPart("line.txt", status);
+    int    len;
+    std::unique_ptr<UChar []> testFile(ReadAndConvertFile(path.data(), len, "UTF-8", status));
+    if (!assertSuccess(WHERE, status)) {
+        return;
+    }
+
+    UParseError pe;
+    // rules = testFile.get();
+    RuleBasedBreakIterator *bi = new RuleBasedBreakIterator(rules, pe, status);
+
+    if (!assertSuccess(WHERE, status)) {
+        delete bi;
+        return;
+    }
+    // bi->dumpTables();
+
+    delete bi;
+#endif
+}
+
+#if U_ENABLE_TRACING
+static std::vector<std::string> gData;
+static std::vector<int32_t> gEntryFn;
+static std::vector<int32_t> gExitFn;
+static std::vector<int32_t> gDataFn;
+
+static void U_CALLCONV traceData(
+        const void*,
+        int32_t fnNumber,
+        int32_t,
+        const char *,
+        va_list args) {
+    if (UTRACE_UBRK_START <= fnNumber && fnNumber <= UTRACE_UBRK_LIMIT) {
+        const char* data = va_arg(args, const char*);
+        gDataFn.push_back(fnNumber);
+        gData.push_back(data);
     }
 }
+
+static void traceEntry(const void *, int32_t fnNumber) {
+    if (UTRACE_UBRK_START <= fnNumber && fnNumber <= UTRACE_UBRK_LIMIT) {
+        gEntryFn.push_back(fnNumber);
+    }
+}
+
+static void traceExit(const void *, int32_t fnNumber, const char *, va_list) {
+    if (UTRACE_UBRK_START <= fnNumber && fnNumber <= UTRACE_UBRK_LIMIT) {
+        gExitFn.push_back(fnNumber);
+    }
+}
+
+
+void RBBITest::assertTestTraceResult(int32_t fnNumber, const char* expectedData) {
+    assertEquals("utrace_entry should be called ", 1, gEntryFn.size());
+    assertEquals("utrace_entry should be called with ", fnNumber, gEntryFn[0]);
+    assertEquals("utrace_exit should be called ", 1, gExitFn.size());
+    assertEquals("utrace_exit should be called with ", fnNumber, gExitFn[0]);
+
+    if (expectedData == nullptr) {
+      assertEquals("utrace_data should not be called ", 0, gDataFn.size());
+      assertEquals("utrace_data should not be called ", 0, gData.size());
+    } else {
+      assertEquals("utrace_data should be called ", 1, gDataFn.size());
+      assertEquals("utrace_data should be called with ", fnNumber, gDataFn[0]);
+      assertEquals("utrace_data should be called ", 1, gData.size());
+      assertEquals("utrace_data should pass in ", expectedData, gData[0].c_str());
+    }
+}
+
+void SetupTestTrace() {
+    gEntryFn.clear();
+    gExitFn.clear();
+    gDataFn.clear();
+    gData.clear();
+
+    const void* context = nullptr;
+    utrace_setFunctions(context, traceEntry, traceExit, traceData);
+    utrace_setLevel(UTRACE_INFO);
+}
+
+void RBBITest::TestTraceCreateCharacter(void) {
+    SetupTestTrace();
+    IcuTestErrorCode status(*this, "TestTraceCreateCharacter");
+    LocalPointer<BreakIterator> brkitr(
+        BreakIterator::createCharacterInstance("zh-CN", status));
+    status.errIfFailureAndReset();
+    assertTestTraceResult(UTRACE_UBRK_CREATE_CHARACTER, nullptr);
+}
+
+void RBBITest::TestTraceCreateTitle(void) {
+    SetupTestTrace();
+    IcuTestErrorCode status(*this, "TestTraceCreateTitle");
+    LocalPointer<BreakIterator> brkitr(
+        BreakIterator::createTitleInstance("zh-CN", status));
+    status.errIfFailureAndReset();
+    assertTestTraceResult(UTRACE_UBRK_CREATE_TITLE, nullptr);
+}
+
+void RBBITest::TestTraceCreateSentence(void) {
+    SetupTestTrace();
+    IcuTestErrorCode status(*this, "TestTraceCreateSentence");
+    LocalPointer<BreakIterator> brkitr(
+        BreakIterator::createSentenceInstance("zh-CN", status));
+    status.errIfFailureAndReset();
+    assertTestTraceResult(UTRACE_UBRK_CREATE_SENTENCE, nullptr);
+}
+
+void RBBITest::TestTraceCreateWord(void) {
+    SetupTestTrace();
+    IcuTestErrorCode status(*this, "TestTraceCreateWord");
+    LocalPointer<BreakIterator> brkitr(
+        BreakIterator::createWordInstance("zh-CN", status));
+    status.errIfFailureAndReset();
+    assertTestTraceResult(UTRACE_UBRK_CREATE_WORD, nullptr);
+}
+
+void RBBITest::TestTraceCreateLine(void) {
+    SetupTestTrace();
+    IcuTestErrorCode status(*this, "TestTraceCreateLine");
+    LocalPointer<BreakIterator> brkitr(
+        BreakIterator::createLineInstance("zh-CN", status));
+    status.errIfFailureAndReset();
+    assertTestTraceResult(UTRACE_UBRK_CREATE_LINE, "");
+}
+
+void RBBITest::TestTraceCreateLineStrict(void) {
+    SetupTestTrace();
+    IcuTestErrorCode status(*this, "TestTraceCreateLineStrict");
+    LocalPointer<BreakIterator> brkitr(
+        BreakIterator::createLineInstance("zh-CN-u-lb-strict", status));
+    status.errIfFailureAndReset();
+    assertTestTraceResult(UTRACE_UBRK_CREATE_LINE, "strict");
+}
+
+void RBBITest::TestTraceCreateLineNormal(void) {
+    SetupTestTrace();
+    IcuTestErrorCode status(*this, "TestTraceCreateLineNormal");
+    LocalPointer<BreakIterator> brkitr(
+        BreakIterator::createLineInstance("zh-CN-u-lb-normal", status));
+    status.errIfFailureAndReset();
+    assertTestTraceResult(UTRACE_UBRK_CREATE_LINE, "normal");
+}
+
+void RBBITest::TestTraceCreateLineLoose(void) {
+    SetupTestTrace();
+    IcuTestErrorCode status(*this, "TestTraceCreateLineLoose");
+    LocalPointer<BreakIterator> brkitr(
+        BreakIterator::createLineInstance("zh-CN-u-lb-loose", status));
+    status.errIfFailureAndReset();
+    assertTestTraceResult(UTRACE_UBRK_CREATE_LINE, "loose");
+}
+
+void RBBITest::TestTraceCreateBreakEngine(void) {
+    rbbi_cleanup();
+    SetupTestTrace();
+    IcuTestErrorCode status(*this, "TestTraceCreateBreakEngine");
+    LocalPointer<BreakIterator> brkitr(
+        BreakIterator::createWordInstance("zh-CN", status));
+    status.errIfFailureAndReset();
+    assertTestTraceResult(UTRACE_UBRK_CREATE_WORD, nullptr);
+
+    // To word break the following text, BreakIterator will create 5 dictionary
+    // break engine internally.
+    brkitr->setText(
+        u"test "
+        u"測試 " // Hani
+        u"សាកល្បង " // Khmr
+        u"ທົດສອບ " // Laoo
+        u"စမ်းသပ်မှု " // Mymr
+        u"ทดสอบ " // Thai
+        u"test "
+    );
+
+    // Loop through all the text.
+    while (brkitr->next() > 0) ;
+
+    assertEquals("utrace_entry should be called ", 6, gEntryFn.size());
+    assertEquals("utrace_exit should be called ", 6, gExitFn.size());
+    assertEquals("utrace_data should be called ", 5, gDataFn.size());
+
+    for (std::vector<int>::size_type i = 0; i < gDataFn.size(); i++) {
+        assertEquals("utrace_entry should be called ",
+                     UTRACE_UBRK_CREATE_BREAK_ENGINE, gEntryFn[i+1]);
+        assertEquals("utrace_exit should be called ",
+                     UTRACE_UBRK_CREATE_BREAK_ENGINE, gExitFn[i+1]);
+        assertEquals("utrace_data should be called ",
+                     UTRACE_UBRK_CREATE_BREAK_ENGINE, gDataFn[i]);
+    }
+
+    assertEquals("utrace_data should pass ", "Hani", gData[0].c_str());
+    assertEquals("utrace_data should pass ", "Khmr", gData[1].c_str());
+    assertEquals("utrace_data should pass ", "Laoo", gData[2].c_str());
+    assertEquals("utrace_data should pass ", "Mymr", gData[3].c_str());
+    assertEquals("utrace_data should pass ", "Thai", gData[4].c_str());
+
+}
+#endif
 
 #endif // #if !UCONFIG_NO_BREAK_ITERATION

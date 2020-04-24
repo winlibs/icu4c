@@ -79,6 +79,12 @@ private:
     void Test20332_PersonUnits();
     void TestNumericTime();
     void TestNumericTimeSomeSpecialFormats();
+    void TestIdentifiers();
+    void TestInvalidIdentifiers();
+    void TestCompoundUnitOperations();
+    void TestDimensionlessBehaviour();
+    void Test21060_AddressSanitizerProblem();
+
     void verifyFormat(
         const char *description,
         const MeasureFormat &fmt,
@@ -138,6 +144,21 @@ private:
         NumberFormat::EAlignmentFields field,
         int32_t start,
         int32_t end);
+    void verifySingleUnit(
+        const MeasureUnit& unit,
+        UMeasureSIPrefix siPrefix,
+        int8_t power,
+        const char* identifier);
+    void verifyCompoundUnit(
+        const MeasureUnit& unit,
+        const char* identifier,
+        const char** subIdentifiers,
+        int32_t subIdentifierCount);
+    void verifyMixedUnit(
+        const MeasureUnit& unit,
+        const char* identifier,
+        const char** subIdentifiers,
+        int32_t subIdentifierCount);
 };
 
 void MeasureFormatTest::runIndexedTest(
@@ -182,6 +203,11 @@ void MeasureFormatTest::runIndexedTest(
     TESTCASE_AUTO(Test20332_PersonUnits);
     TESTCASE_AUTO(TestNumericTime);
     TESTCASE_AUTO(TestNumericTimeSomeSpecialFormats);
+    TESTCASE_AUTO(TestIdentifiers);
+    TESTCASE_AUTO(TestInvalidIdentifiers);
+    TESTCASE_AUTO(TestCompoundUnitOperations);
+    TESTCASE_AUTO(TestDimensionlessBehaviour);
+    TESTCASE_AUTO(Test21060_AddressSanitizerProblem);
     TESTCASE_AUTO_END;
 }
 
@@ -3215,6 +3241,312 @@ void MeasureFormatTest::TestNumericTimeSomeSpecialFormats() {
     verifyFormat("Danish fhoursFminutes", fmtDa, fhoursFminutes, 2, "2.03,877");
 }
 
+void MeasureFormatTest::TestIdentifiers() {
+    IcuTestErrorCode status(*this, "TestIdentifiers");
+    struct TestCase {
+        const char* id;
+        const char* normalized;
+    } cases[] = {
+        // Correctly normalized identifiers should not change
+        {"", ""},
+        {"square-meter-per-square-meter", "square-meter-per-square-meter"},
+        {"kilogram-meter-per-square-meter-square-second",
+         "kilogram-meter-per-square-meter-square-second"},
+        {"square-mile-and-square-foot", "square-mile-and-square-foot"},
+        {"square-foot-and-square-mile", "square-foot-and-square-mile"},
+        {"per-cubic-centimeter", "per-cubic-centimeter"},
+        {"per-kilometer", "per-kilometer"},
+
+        // Normalization of power and per
+        {"p2-foot-and-p2-mile", "square-foot-and-square-mile"},
+        {"gram-square-gram-per-dekagram", "cubic-gram-per-dekagram"},
+        {"kilogram-per-meter-per-second", "kilogram-per-meter-second"},
+
+        // TODO(ICU-20920): Add more test cases once the proper ranking is available.
+    };
+    for (const auto &cas : cases) {
+        status.setScope(cas.id);
+        MeasureUnit unit = MeasureUnit::forIdentifier(cas.id, status);
+        status.errIfFailureAndReset();
+        const char* actual = unit.getIdentifier();
+        assertEquals(cas.id, cas.normalized, actual);
+        status.errIfFailureAndReset();
+    }
+}
+
+void MeasureFormatTest::TestInvalidIdentifiers() {
+    IcuTestErrorCode status(*this, "TestInvalidIdentifiers");
+
+    const char *const inputs[] = {
+        "kilo",
+        "kilokilo",
+        "onekilo",
+        "meterkilo",
+        "meter-kilo",
+        "k",
+        "meter-",
+        "meter+",
+        "-meter",
+        "+meter",
+        "-kilometer",
+        "+kilometer",
+        "-p2-meter",
+        "+p2-meter",
+        "+",
+        "-",
+        "-mile",
+        "-and-mile",
+        "-per-mile",
+        "one",
+        "one-one",
+        "one-per-mile",
+        "one-per-cubic-centimeter",
+        "square--per-meter",
+        "metersecond", // Must have compound part in between single units
+
+        // Negative powers not supported in mixed units yet. TODO(CLDR-13701).
+        "per-hour-and-hertz",
+        "hertz-and-per-hour",
+
+        // Compound units not supported in mixed units yet. TODO(CLDR-13700).
+        "kilonewton-meter-and-newton-meter",
+    };
+
+    for (const auto& input : inputs) {
+        status.setScope(input);
+        MeasureUnit::forIdentifier(input, status);
+        status.expectErrorAndReset(U_ILLEGAL_ARGUMENT_ERROR);
+    }
+}
+
+void MeasureFormatTest::TestCompoundUnitOperations() {
+    IcuTestErrorCode status(*this, "TestCompoundUnitOperations");
+
+    MeasureUnit::forIdentifier("kilometer-per-second-joule", status);
+
+    MeasureUnit kilometer = MeasureUnit::getKilometer();
+    MeasureUnit cubicMeter = MeasureUnit::getCubicMeter();
+    MeasureUnit meter = kilometer.withSIPrefix(UMEASURE_SI_PREFIX_ONE, status);
+    MeasureUnit centimeter1 = kilometer.withSIPrefix(UMEASURE_SI_PREFIX_CENTI, status);
+    MeasureUnit centimeter2 = meter.withSIPrefix(UMEASURE_SI_PREFIX_CENTI, status);
+    MeasureUnit cubicDecimeter = cubicMeter.withSIPrefix(UMEASURE_SI_PREFIX_DECI, status);
+
+    verifySingleUnit(kilometer, UMEASURE_SI_PREFIX_KILO, 1, "kilometer");
+    verifySingleUnit(meter, UMEASURE_SI_PREFIX_ONE, 1, "meter");
+    verifySingleUnit(centimeter1, UMEASURE_SI_PREFIX_CENTI, 1, "centimeter");
+    verifySingleUnit(centimeter2, UMEASURE_SI_PREFIX_CENTI, 1, "centimeter");
+    verifySingleUnit(cubicDecimeter, UMEASURE_SI_PREFIX_DECI, 3, "cubic-decimeter");
+
+    assertTrue("centimeter equality", centimeter1 == centimeter2);
+    assertTrue("kilometer inequality", centimeter1 != kilometer);
+
+    MeasureUnit squareMeter = meter.withDimensionality(2, status);
+    MeasureUnit overCubicCentimeter = centimeter1.withDimensionality(-3, status);
+    MeasureUnit quarticKilometer = kilometer.withDimensionality(4, status);
+    MeasureUnit overQuarticKilometer1 = kilometer.withDimensionality(-4, status);
+
+    verifySingleUnit(squareMeter, UMEASURE_SI_PREFIX_ONE, 2, "square-meter");
+    verifySingleUnit(overCubicCentimeter, UMEASURE_SI_PREFIX_CENTI, -3, "per-cubic-centimeter");
+    verifySingleUnit(quarticKilometer, UMEASURE_SI_PREFIX_KILO, 4, "p4-kilometer");
+    verifySingleUnit(overQuarticKilometer1, UMEASURE_SI_PREFIX_KILO, -4, "per-p4-kilometer");
+
+    assertTrue("power inequality", quarticKilometer != overQuarticKilometer1);
+
+    MeasureUnit overQuarticKilometer2 = quarticKilometer.reciprocal(status);
+    MeasureUnit overQuarticKilometer3 = kilometer.product(kilometer, status)
+        .product(kilometer, status)
+        .product(kilometer, status)
+        .reciprocal(status);
+    MeasureUnit overQuarticKilometer4 = meter.withDimensionality(4, status)
+        .reciprocal(status)
+        .withSIPrefix(UMEASURE_SI_PREFIX_KILO, status);
+
+    verifySingleUnit(overQuarticKilometer2, UMEASURE_SI_PREFIX_KILO, -4, "per-p4-kilometer");
+    verifySingleUnit(overQuarticKilometer3, UMEASURE_SI_PREFIX_KILO, -4, "per-p4-kilometer");
+    verifySingleUnit(overQuarticKilometer4, UMEASURE_SI_PREFIX_KILO, -4, "per-p4-kilometer");
+
+    assertTrue("reciprocal equality", overQuarticKilometer1 == overQuarticKilometer2);
+    assertTrue("reciprocal equality", overQuarticKilometer1 == overQuarticKilometer3);
+    assertTrue("reciprocal equality", overQuarticKilometer1 == overQuarticKilometer4);
+
+    MeasureUnit kiloSquareSecond = MeasureUnit::getSecond()
+        .withDimensionality(2, status).withSIPrefix(UMEASURE_SI_PREFIX_KILO, status);
+    MeasureUnit meterSecond = meter.product(kiloSquareSecond, status);
+    MeasureUnit cubicMeterSecond1 = meter.withDimensionality(3, status).product(kiloSquareSecond, status);
+    MeasureUnit centimeterSecond1 = meter.withSIPrefix(UMEASURE_SI_PREFIX_CENTI, status).product(kiloSquareSecond, status);
+    MeasureUnit secondCubicMeter = kiloSquareSecond.product(meter.withDimensionality(3, status), status);
+    MeasureUnit secondCentimeter = kiloSquareSecond.product(meter.withSIPrefix(UMEASURE_SI_PREFIX_CENTI, status), status);
+    MeasureUnit secondCentimeterPerKilometer = secondCentimeter.product(kilometer.reciprocal(status), status);
+
+    verifySingleUnit(kiloSquareSecond, UMEASURE_SI_PREFIX_KILO, 2, "square-kilosecond");
+    const char* meterSecondSub[] = {"meter", "square-kilosecond"};
+    verifyCompoundUnit(meterSecond, "meter-square-kilosecond",
+        meterSecondSub, UPRV_LENGTHOF(meterSecondSub));
+    const char* cubicMeterSecond1Sub[] = {"cubic-meter", "square-kilosecond"};
+    verifyCompoundUnit(cubicMeterSecond1, "cubic-meter-square-kilosecond",
+        cubicMeterSecond1Sub, UPRV_LENGTHOF(cubicMeterSecond1Sub));
+    const char* centimeterSecond1Sub[] = {"centimeter", "square-kilosecond"};
+    verifyCompoundUnit(centimeterSecond1, "centimeter-square-kilosecond",
+        centimeterSecond1Sub, UPRV_LENGTHOF(centimeterSecond1Sub));
+    const char* secondCubicMeterSub[] = {"cubic-meter", "square-kilosecond"};
+    verifyCompoundUnit(secondCubicMeter, "cubic-meter-square-kilosecond",
+        secondCubicMeterSub, UPRV_LENGTHOF(secondCubicMeterSub));
+    const char* secondCentimeterSub[] = {"centimeter", "square-kilosecond"};
+    verifyCompoundUnit(secondCentimeter, "centimeter-square-kilosecond",
+        secondCentimeterSub, UPRV_LENGTHOF(secondCentimeterSub));
+    const char* secondCentimeterPerKilometerSub[] = {"centimeter", "square-kilosecond", "per-kilometer"};
+    verifyCompoundUnit(secondCentimeterPerKilometer, "centimeter-square-kilosecond-per-kilometer",
+        secondCentimeterPerKilometerSub, UPRV_LENGTHOF(secondCentimeterPerKilometerSub));
+
+    assertTrue("reordering equality", cubicMeterSecond1 == secondCubicMeter);
+    assertTrue("additional simple units inequality", secondCubicMeter != secondCentimeter);
+
+    // Don't allow get/set power or SI prefix on compound units
+    status.errIfFailureAndReset();
+    meterSecond.getDimensionality(status);
+    status.expectErrorAndReset(U_ILLEGAL_ARGUMENT_ERROR);
+    meterSecond.withDimensionality(3, status);
+    status.expectErrorAndReset(U_ILLEGAL_ARGUMENT_ERROR);
+    meterSecond.getSIPrefix(status);
+    status.expectErrorAndReset(U_ILLEGAL_ARGUMENT_ERROR);
+    meterSecond.withSIPrefix(UMEASURE_SI_PREFIX_CENTI, status);
+    status.expectErrorAndReset(U_ILLEGAL_ARGUMENT_ERROR);
+
+    // Test that StringPiece does not overflow
+    MeasureUnit centimeter3 = MeasureUnit::forIdentifier({secondCentimeter.getIdentifier(), 10}, status);
+    verifySingleUnit(centimeter3, UMEASURE_SI_PREFIX_CENTI, 1, "centimeter");
+    assertTrue("string piece equality", centimeter1 == centimeter3);
+
+    MeasureUnit footInch = MeasureUnit::forIdentifier("foot-and-inch", status);
+    MeasureUnit inchFoot = MeasureUnit::forIdentifier("inch-and-foot", status);
+
+    const char* footInchSub[] = {"foot", "inch"};
+    verifyMixedUnit(footInch, "foot-and-inch",
+        footInchSub, UPRV_LENGTHOF(footInchSub));
+    const char* inchFootSub[] = {"inch", "foot"};
+    verifyMixedUnit(inchFoot, "inch-and-foot",
+        inchFootSub, UPRV_LENGTHOF(inchFootSub));
+
+    assertTrue("order matters inequality", footInch != inchFoot);
+
+    MeasureUnit dimensionless;
+    MeasureUnit dimensionless2 = MeasureUnit::forIdentifier("", status);
+    status.errIfFailureAndReset("Dimensionless MeasureUnit.");
+    assertTrue("dimensionless equality", dimensionless == dimensionless2);
+
+    // We support starting from an "identity" MeasureUnit and then combining it
+    // with others via product:
+    MeasureUnit kilometer2 = dimensionless.product(kilometer, status);
+    status.errIfFailureAndReset("dimensionless.product(kilometer, status)");
+    verifySingleUnit(kilometer2, UMEASURE_SI_PREFIX_KILO, 1, "kilometer");
+    assertTrue("kilometer equality", kilometer == kilometer2);
+
+    // Test out-of-range powers
+    MeasureUnit power15 = MeasureUnit::forIdentifier("p15-kilometer", status);
+    verifySingleUnit(power15, UMEASURE_SI_PREFIX_KILO, 15, "p15-kilometer");
+    status.errIfFailureAndReset();
+    MeasureUnit power16a = MeasureUnit::forIdentifier("p16-kilometer", status);
+    status.expectErrorAndReset(U_ILLEGAL_ARGUMENT_ERROR);
+    MeasureUnit power16b = power15.product(kilometer, status);
+    status.expectErrorAndReset(U_ILLEGAL_ARGUMENT_ERROR);
+    MeasureUnit powerN15 = MeasureUnit::forIdentifier("per-p15-kilometer", status);
+    verifySingleUnit(powerN15, UMEASURE_SI_PREFIX_KILO, -15, "per-p15-kilometer");
+    status.errIfFailureAndReset();
+    MeasureUnit powerN16a = MeasureUnit::forIdentifier("per-p16-kilometer", status);
+    status.expectErrorAndReset(U_ILLEGAL_ARGUMENT_ERROR);
+    MeasureUnit powerN16b = powerN15.product(overQuarticKilometer1, status);
+    status.expectErrorAndReset(U_ILLEGAL_ARGUMENT_ERROR);
+}
+
+void MeasureFormatTest::TestDimensionlessBehaviour() {
+    IcuTestErrorCode status(*this, "TestDimensionlessBehaviour");
+    MeasureUnit dimensionless;
+    MeasureUnit modified;
+
+    // At the time of writing, each of the seven groups below caused
+    // Parser::from("") to be called:
+
+    // splitToSingleUnits
+    int32_t count;
+    LocalArray<MeasureUnit> singles = dimensionless.splitToSingleUnits(count, status);
+    status.errIfFailureAndReset("dimensionless.splitToSingleUnits(...)");
+    assertEquals("no singles in dimensionless", 0, count);
+
+    // product(dimensionless)
+    MeasureUnit mile = MeasureUnit::getMile();
+    mile = mile.product(dimensionless, status);
+    status.errIfFailureAndReset("mile.product(dimensionless, ...)");
+    verifySingleUnit(mile, UMEASURE_SI_PREFIX_ONE, 1, "mile");
+
+    // dimensionless.getSIPrefix()
+    UMeasureSIPrefix siPrefix = dimensionless.getSIPrefix(status);
+    status.errIfFailureAndReset("dimensionless.getSIPrefix(...)");
+    assertEquals("dimensionless SIPrefix", UMEASURE_SI_PREFIX_ONE, siPrefix);
+
+    // dimensionless.withSIPrefix()
+    modified = dimensionless.withSIPrefix(UMEASURE_SI_PREFIX_KILO, status);
+    status.errIfFailureAndReset("dimensionless.withSIPrefix(...)");
+    singles = modified.splitToSingleUnits(count, status);
+    assertEquals("no singles in modified", 0, count);
+    siPrefix = modified.getSIPrefix(status);
+    status.errIfFailureAndReset("modified.getSIPrefix(...)");
+    assertEquals("modified SIPrefix", UMEASURE_SI_PREFIX_ONE, siPrefix);
+
+    // dimensionless.getComplexity()
+    UMeasureUnitComplexity complexity = dimensionless.getComplexity(status);
+    status.errIfFailureAndReset("dimensionless.getComplexity(...)");
+    assertEquals("dimensionless complexity", UMEASURE_UNIT_SINGLE, complexity);
+
+    // Dimensionality is mostly meaningless for dimensionless units, but it's
+    // still considered a SINGLE unit, so this code doesn't throw errors:
+
+    // dimensionless.getDimensionality()
+    int32_t dimensionality = dimensionless.getDimensionality(status);
+    status.errIfFailureAndReset("dimensionless.getDimensionality(...)");
+    assertEquals("dimensionless dimensionality", 0, dimensionality);
+
+    // dimensionless.withDimensionality()
+    dimensionless.withDimensionality(-1, status);
+    status.errIfFailureAndReset("dimensionless.withDimensionality(...)");
+    dimensionality = dimensionless.getDimensionality(status);
+    status.errIfFailureAndReset("dimensionless.getDimensionality(...)");
+    assertEquals("dimensionless dimensionality", 0, dimensionality);
+}
+
+// ICU-21060
+void MeasureFormatTest::Test21060_AddressSanitizerProblem() {
+    IcuTestErrorCode status(*this, "Test21060_AddressSanitizerProblem");
+
+    MeasureUnit first = MeasureUnit::forIdentifier("", status);
+    status.errIfFailureAndReset();
+
+    // Experimentally, a compound unit like "kilogram-meter" failed. A single
+    // unit like "kilogram" or "meter" did not fail, did not trigger the
+    // problem.
+    MeasureUnit crux = MeasureUnit::forIdentifier("per-meter", status);
+
+    // Heap allocation of a new CharString for first.identifier happens here:
+    first = first.product(crux, status);
+
+    // Constructing second from first's identifier resulted in a failure later,
+    // as second held a reference to a substring of first's identifier:
+    MeasureUnit second = MeasureUnit::forIdentifier(first.getIdentifier(), status);
+
+    // Heap is freed here, as an old first.identifier CharString is deallocated
+    // and a new CharString is allocated:
+    first = first.product(crux, status);
+
+    // Proving we've had no failure yet:
+    status.errIfFailureAndReset();
+
+    // heap-use-after-free failure happened here, since a SingleUnitImpl had
+    // held onto a StringPiece pointing at a substring of an identifier that was
+    // freed above:
+    second = second.product(crux, status);
+
+    status.errIfFailureAndReset();
+}
+
 
 void MeasureFormatTest::verifyFieldPosition(
         const char *description,
@@ -3283,6 +3615,97 @@ void MeasureFormatTest::verifyFormat(
         int32_t count) {
     for (int32_t i = 0; i < count; ++i) {
         verifyFormat(description, fmt, expectedResults[i].measures, expectedResults[i].count, expectedResults[i].expected);
+    }
+}
+
+void MeasureFormatTest::verifySingleUnit(
+        const MeasureUnit& unit,
+        UMeasureSIPrefix siPrefix,
+        int8_t power,
+        const char* identifier) {
+    IcuTestErrorCode status(*this, "verifySingleUnit");
+    UnicodeString uid(identifier, -1, US_INV);
+    assertEquals(uid + ": SI prefix",
+        siPrefix,
+        unit.getSIPrefix(status));
+    status.errIfFailureAndReset("%s: SI prefix", identifier);
+    assertEquals(uid + ": Power",
+        static_cast<int32_t>(power),
+        static_cast<int32_t>(unit.getDimensionality(status)));
+    status.errIfFailureAndReset("%s: Power", identifier);
+    assertEquals(uid + ": Identifier",
+        identifier,
+        unit.getIdentifier());
+    status.errIfFailureAndReset("%s: Identifier", identifier);
+    assertTrue(uid + ": Constructor",
+        unit == MeasureUnit::forIdentifier(identifier, status));
+    status.errIfFailureAndReset("%s: Constructor", identifier);
+    assertEquals(uid + ": Complexity",
+        UMEASURE_UNIT_SINGLE,
+        unit.getComplexity(status));
+    status.errIfFailureAndReset("%s: Complexity", identifier);
+}
+
+void MeasureFormatTest::verifyCompoundUnit(
+        const MeasureUnit& unit,
+        const char* identifier,
+        const char** subIdentifiers,
+        int32_t subIdentifierCount) {
+    IcuTestErrorCode status(*this, "verifyCompoundUnit");
+    UnicodeString uid(identifier, -1, US_INV);
+    assertEquals(uid + ": Identifier",
+        identifier,
+        unit.getIdentifier());
+    status.errIfFailureAndReset("%s: Identifier", identifier);
+    assertTrue(uid + ": Constructor",
+        unit == MeasureUnit::forIdentifier(identifier, status));
+    status.errIfFailureAndReset("%s: Constructor", identifier);
+    assertEquals(uid + ": Complexity",
+        UMEASURE_UNIT_COMPOUND,
+        unit.getComplexity(status));
+    status.errIfFailureAndReset("%s: Complexity", identifier);
+
+    int32_t length;
+    LocalArray<MeasureUnit> subUnits = unit.splitToSingleUnits(length, status);
+    assertEquals(uid + ": Length", subIdentifierCount, length);
+    for (int32_t i = 0;; i++) {
+        if (i >= subIdentifierCount || i >= length) break;
+        assertEquals(uid + ": Sub-unit #" + Int64ToUnicodeString(i),
+            subIdentifiers[i],
+            subUnits[i].getIdentifier());
+        assertEquals(uid + ": Sub-unit Complexity",
+            UMEASURE_UNIT_SINGLE,
+            subUnits[i].getComplexity(status));
+    }
+}
+
+void MeasureFormatTest::verifyMixedUnit(
+        const MeasureUnit& unit,
+        const char* identifier,
+        const char** subIdentifiers,
+        int32_t subIdentifierCount) {
+    IcuTestErrorCode status(*this, "verifyMixedUnit");
+    UnicodeString uid(identifier, -1, US_INV);
+    assertEquals(uid + ": Identifier",
+        identifier,
+        unit.getIdentifier());
+    status.errIfFailureAndReset("%s: Identifier", identifier);
+    assertTrue(uid + ": Constructor",
+        unit == MeasureUnit::forIdentifier(identifier, status));
+    status.errIfFailureAndReset("%s: Constructor", identifier);
+    assertEquals(uid + ": Complexity",
+        UMEASURE_UNIT_MIXED,
+        unit.getComplexity(status));
+    status.errIfFailureAndReset("%s: Complexity", identifier);
+
+    int32_t length;
+    LocalArray<MeasureUnit> subUnits = unit.splitToSingleUnits(length, status);
+    assertEquals(uid + ": Length", subIdentifierCount, length);
+    for (int32_t i = 0;; i++) {
+        if (i >= subIdentifierCount || i >= length) break;
+        assertEquals(uid + ": Sub-unit #" + Int64ToUnicodeString(i),
+            subIdentifiers[i],
+            subUnits[i].getIdentifier());
     }
 }
 

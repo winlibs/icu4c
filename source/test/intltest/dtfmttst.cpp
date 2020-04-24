@@ -128,6 +128,7 @@ void DateFormatTest::runIndexedTest( int32_t index, UBool exec, const char* &nam
     TESTCASE_AUTO(TestDayPeriodParsing);
     TESTCASE_AUTO(TestParseRegression13744);
     TESTCASE_AUTO(TestAdoptCalendarLeak);
+    TESTCASE_AUTO(Test20741_ABFields);
 
     TESTCASE_AUTO_END;
 }
@@ -4912,7 +4913,37 @@ void DateFormatTest::TestPatternFromSkeleton() {
         {Locale::getEnglish(), "jjmm", "h:mm a"},
         {Locale::getEnglish(), "JJmm", "hh:mm"},
         {Locale::getGerman(), "jjmm", "HH:mm"},
-        {Locale::getGerman(), "JJmm", "HH:mm"}
+        {Locale::getGerman(), "JJmm", "HH:mm"},
+        // Ticket #20739
+        // minutes+milliseconds, seconds missing, should be repaired
+        {Locale::getEnglish(), "SSSSm", "mm:ss.SSSS"},
+        {Locale::getEnglish(), "mSSSS", "mm:ss.SSSS"},
+        {Locale::getEnglish(), "SSSm", "mm:ss.SSS"},
+        {Locale::getEnglish(), "mSSS", "mm:ss.SSS"},
+        {Locale::getEnglish(), "SSm", "mm:ss.SS"},
+        {Locale::getEnglish(), "mSS", "mm:ss.SS"},
+        {Locale::getEnglish(), "Sm", "mm:ss.S"},
+        {Locale::getEnglish(), "mS", "mm:ss.S"},
+        // only milliseconds, untouched, no repairs
+        {Locale::getEnglish(), "S", "S"},
+        {Locale::getEnglish(), "SS", "SS"},
+        {Locale::getEnglish(), "SSS", "SSS"},
+        {Locale::getEnglish(), "SSSS", "SSSS"},
+        // hour:minute+seconds+milliseconds, correct, no repairs, proper pattern
+        {Locale::getEnglish(), "jmsSSS", "h:mm:ss.SSS a"},
+        {Locale::getEnglish(), "jmSSS", "h:mm:ss.SSS a"},
+        // Ticket #20738
+        // seconds+milliseconds, correct, no repairs, proper pattern
+        {Locale::getEnglish(), "sS", "s.S"},
+        {Locale::getEnglish(), "sSS", "s.SS"},
+        {Locale::getEnglish(), "sSSS", "s.SSS"},
+        {Locale::getEnglish(), "sSSSS", "s.SSSS"},
+        {Locale::getEnglish(), "sS", "s.S"},
+        // minutes+seconds+milliseconds, correct, no repairs, proper pattern
+        {Locale::getEnglish(), "msS", "mm:ss.S"},
+        {Locale::getEnglish(), "msSS", "mm:ss.SS"},
+        {Locale::getEnglish(), "msSSS", "mm:ss.SSS"},
+        {Locale::getEnglish(), "msSSSS", "mm:ss.SSSS"}
     };
 
     for (size_t i = 0; i < UPRV_LENGTHOF(TESTDATA); i++) {
@@ -5553,6 +5584,51 @@ void DateFormatTest::TestAdoptCalendarLeak() {
         status);
     ASSERT_OK(status);
     sdf.adoptCalendar(Calendar::createInstance(status));
+}
+
+/**
+ * Test that 'a' and 'B' fields are not duplicated in the field position iterator.
+ */
+void DateFormatTest::Test20741_ABFields() {
+    IcuTestErrorCode status(*this, "Test20741_ABFields");
+
+    const char16_t timeZone[] = u"PST8PDT";
+
+    UnicodeString skeletons[] = {u"EEEEEBBBBB", u"EEEEEbbbbb"};
+
+    for (int32_t j = 0; j < 2; j++) {
+        UnicodeString skeleton = skeletons[j];
+
+        int32_t count = 0;
+        const Locale* locales = Locale::getAvailableLocales(count);
+        for (int32_t i = 0; i < count; i++) {
+            if (quick && (i % 17) != 0) { continue; }
+
+            const Locale locale = locales[i];
+            LocalPointer<DateTimePatternGenerator> gen(DateTimePatternGenerator::createInstance(locale, status));
+            UnicodeString pattern = gen->getBestPattern(skeleton, status);
+
+            SimpleDateFormat dateFormat(pattern, locale, status);
+            FieldPositionIterator fpositer;
+            UnicodeString result;
+            LocalPointer<Calendar> calendar(Calendar::createInstance(TimeZone::createTimeZone(timeZone), status));
+            calendar->setTime(UDate(0), status);
+            dateFormat.format(*calendar, result, &fpositer, status);
+
+            FieldPosition curFieldPosition;
+            FieldPosition lastFieldPosition;
+            lastFieldPosition.setBeginIndex(-1);
+            lastFieldPosition.setEndIndex(-1);
+            while(fpositer.next(curFieldPosition)) {
+                assertFalse("Field missing on pattern", pattern.indexOf(PATTERN_CHARS[curFieldPosition.getField()]) == -1);
+                if (curFieldPosition.getBeginIndex() == lastFieldPosition.getBeginIndex() && curFieldPosition.getEndIndex() == lastFieldPosition.getEndIndex()) {
+                    assertEquals("Different fields at same position", PATTERN_CHARS[curFieldPosition.getField()], PATTERN_CHARS[lastFieldPosition.getField()]);
+                }
+
+                lastFieldPosition = curFieldPosition;
+            }
+        }
+    }
 }
 
 #endif /* #if !UCONFIG_NO_FORMATTING */

@@ -34,6 +34,8 @@ public:
      */
     void testFormat();
 
+    void testFormatMillisecond();
+
     /**
      * Test formatting using user defined DateIntervalInfo
      */
@@ -66,6 +68,8 @@ public:
 
     void testFormattedDateInterval();
     void testCreateInstanceForAllLocales();
+
+    void testTicket20707();
 
 private:
     /**

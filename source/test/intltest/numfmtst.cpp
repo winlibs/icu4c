@@ -238,11 +238,13 @@ void NumberFormatTest::runIndexedTest( int32_t index, UBool exec, const char* &n
   TESTCASE_AUTO(Test13840_ParseLongStringCrash);
   TESTCASE_AUTO(Test13850_EmptyStringCurrency);
   TESTCASE_AUTO(Test20348_CurrencyPrefixOverride);
+  TESTCASE_AUTO(Test20956_MonetarySymbolGetters);
   TESTCASE_AUTO(Test20358_GroupingInPattern);
   TESTCASE_AUTO(Test13731_DefaultCurrency);
   TESTCASE_AUTO(Test20499_CurrencyVisibleDigitsPlural);
   TESTCASE_AUTO(Test13735_GroupingSizeGetter);
   TESTCASE_AUTO(Test13734_StrictFlexibleWhitespace);
+  TESTCASE_AUTO(Test20961_CurrencyPluralPattern);
   TESTCASE_AUTO_END;
 }
 
@@ -2164,10 +2166,16 @@ void NumberFormatTest::TestCurrencyUnit(void){
     static const UChar BAD2[] = u"??A";
     static const UChar XXX[]  = u"XXX";
     static const char XXX8[]  =  "XXX";
+    static const UChar XYZ[]  = u"XYZ";
+    static const char XYZ8[]  =  "XYZ";
     static const UChar INV[]  = u"{$%";
     static const char INV8[]  =  "{$%";
     static const UChar ZZZ[]  = u"zz";
     static const char ZZZ8[]  = "zz";
+    static const UChar JPY[]  = u"JPY";
+    static const char JPY8[]  =  "JPY";
+    static const UChar jpy[]  = u"jpy";
+    static const char jpy8[]  =  "jpy";
 
     UChar* EUR = (UChar*) malloc(6);
     EUR[0] = u'E';
@@ -2180,9 +2188,15 @@ void NumberFormatTest::TestCurrencyUnit(void){
 
     CurrencyUnit cu(USD, ec);
     assertSuccess("CurrencyUnit", ec);
-
     assertEquals("getISOCurrency()", USD, cu.getISOCurrency());
     assertEquals("getSubtype()", USD8, cu.getSubtype());
+
+    // Test XYZ, a valid but non-standard currency.
+    // Note: Country code XY is private-use, so XYZ should remain unallocated.
+    CurrencyUnit extended(XYZ, ec);
+    assertSuccess("non-standard", ec);
+    assertEquals("non-standard", XYZ, extended.getISOCurrency());
+    assertEquals("non-standard", XYZ8, extended.getSubtype());
 
     CurrencyUnit inv(INV, ec);
     assertEquals("non-invariant", U_INVARIANT_CONVERSION_ERROR, ec);
@@ -2257,15 +2271,20 @@ void NumberFormatTest::TestCurrencyUnit(void){
     // Test slicing
     MeasureUnit sliced1 = cu;
     MeasureUnit sliced2 = cu;
+    MeasureUnit sliced3 = extended;
     assertEquals("Subtype after slicing 1", USD8, sliced1.getSubtype());
     assertEquals("Subtype after slicing 2", USD8, sliced2.getSubtype());
+    assertEquals("Subtype after slicing 3", XYZ8, sliced3.getSubtype());
     CurrencyUnit restored1(sliced1, ec);
     CurrencyUnit restored2(sliced2, ec);
+    CurrencyUnit restored3(sliced3, ec);
     assertSuccess("Restoring from MeasureUnit", ec);
     assertEquals("Subtype after restoring 1", USD8, restored1.getSubtype());
     assertEquals("Subtype after restoring 2", USD8, restored2.getSubtype());
+    assertEquals("Subtype after restoring 3", XYZ8, restored3.getSubtype());
     assertEquals("ISO Code after restoring 1", USD, restored1.getISOCurrency());
     assertEquals("ISO Code after restoring 2", USD, restored2.getISOCurrency());
+    assertEquals("ISO Code after restoring 3", XYZ, restored3.getISOCurrency());
 
     // Test copy constructor failure
     LocalPointer<MeasureUnit> meter(MeasureUnit::createMeter(ec));
@@ -2273,6 +2292,27 @@ void NumberFormatTest::TestCurrencyUnit(void){
     CurrencyUnit failure(*meter, ec);
     assertEquals("Copying from meter should fail", ec, U_ILLEGAL_ARGUMENT_ERROR);
     assertEquals("Copying should not give uninitialized ISO code", u"", failure.getISOCurrency());
+
+    // Test equality
+    ec = U_ZERO_ERROR;
+    assertFalse("FAIL: USD == JPY", CurrencyUnit(USD, ec) == CurrencyUnit(JPY, ec));
+    assertTrue("FAIL: USD != USD",  CurrencyUnit(USD, ec) == CurrencyUnit(USD, ec));
+    assertTrue("FAIL: JPY != jpy",  CurrencyUnit(JPY, ec) == CurrencyUnit(jpy, ec));
+    assertTrue("FAIL: jpy != JPY",  CurrencyUnit(jpy, ec) == CurrencyUnit(JPY, ec));
+
+    // Test equality with system charset instances
+    assertFalse("FAIL: USD8 == JPY8", CurrencyUnit(USD8, ec) == CurrencyUnit(JPY8, ec));
+    assertTrue("FAIL: USD8 != USD8",  CurrencyUnit(USD8, ec) == CurrencyUnit(USD8, ec));
+    assertTrue("FAIL: JPY8 != jpy8",  CurrencyUnit(JPY8, ec) == CurrencyUnit(jpy8, ec));
+    assertTrue("FAIL: jpy8 != JPY8",  CurrencyUnit(jpy8, ec) == CurrencyUnit(JPY8, ec));
+
+    // Test equality between UTF-16 and system charset instances
+    assertTrue("FAIL: USD != USD8",  CurrencyUnit(USD, ec) == CurrencyUnit(USD8, ec));
+    assertTrue("FAIL: USD8 != USD",  CurrencyUnit(USD8, ec) == CurrencyUnit(USD, ec));
+    assertTrue("FAIL: JPY != jpy8",  CurrencyUnit(JPY, ec) == CurrencyUnit(jpy8, ec));
+    assertTrue("FAIL: JPY8 != jpy",  CurrencyUnit(JPY8, ec) == CurrencyUnit(jpy, ec));
+    assertTrue("FAIL: jpy != JPY8",  CurrencyUnit(jpy, ec) == CurrencyUnit(JPY8, ec));
+    assertTrue("FAIL: jpy8 != JPY",  CurrencyUnit(jpy8, ec) == CurrencyUnit(JPY, ec));
 
     free(EUR);
     free(EUR8);
@@ -9567,12 +9607,12 @@ void NumberFormatTest::Test13850_EmptyStringCurrency() {
         const char16_t* currencyArg;
         UErrorCode expectedError;
     } cases[] = {
-        {u"", U_ZERO_ERROR},
+        {u"", U_USING_FALLBACK_WARNING},
         {u"U", U_ILLEGAL_ARGUMENT_ERROR},
         {u"Us", U_ILLEGAL_ARGUMENT_ERROR},
-        {nullptr, U_ZERO_ERROR},
+        {nullptr, U_USING_FALLBACK_WARNING},
         {u"U$D", U_INVARIANT_CONVERSION_ERROR},
-        {u"Xxx", U_ZERO_ERROR}
+        {u"Xxx", U_USING_FALLBACK_WARNING}
     };
     for (const auto& cas : cases) {
         UnicodeString message(u"with currency arg: ");
@@ -9633,6 +9673,38 @@ void NumberFormatTest::Test20348_CurrencyPrefixOverride() {
         u"-$", fmt->getNegativePrefix(result.remove()));
     assertEquals("Set negative prefix format",
         u"$100.00", fmt->format(100, result.remove(), NULL, status));
+}
+
+void NumberFormatTest::Test20956_MonetarySymbolGetters() {
+    IcuTestErrorCode status(*this, "Test20956_MonetarySymbolGetters");
+    LocalPointer<DecimalFormat> decimalFormat(static_cast<DecimalFormat*>(
+        NumberFormat::createCurrencyInstance("et", status)));
+    if (status.errDataIfFailureAndReset()) {
+        return;
+    }
+
+    decimalFormat->setCurrency(u"EEK");
+
+    const DecimalFormatSymbols* decimalFormatSymbols = decimalFormat->getDecimalFormatSymbols();
+    assertEquals("MONETARY DECIMAL SEPARATOR",
+        u".",
+        decimalFormatSymbols->getSymbol(DecimalFormatSymbols::kMonetarySeparatorSymbol));
+    assertEquals("DECIMAL SEPARATOR",
+        u",",
+        decimalFormatSymbols->getSymbol(DecimalFormatSymbols::kDecimalSeparatorSymbol));
+    assertEquals("MONETARY GROUPING SEPARATOR",
+        u" ",
+        decimalFormatSymbols->getSymbol(DecimalFormatSymbols::kMonetaryGroupingSeparatorSymbol));
+    assertEquals("GROUPING SEPARATOR",
+        u" ",
+        decimalFormatSymbols->getSymbol(DecimalFormatSymbols::kGroupingSeparatorSymbol));
+    assertEquals("CURRENCY SYMBOL",
+        u"kr",
+        decimalFormatSymbols->getSymbol(DecimalFormatSymbols::kCurrencySymbol));
+
+    UnicodeString sb;
+    decimalFormat->format(12345.12, sb, status);
+    assertEquals("OUTPUT", u"12 345.12 kr", sb);
 }
 
 void NumberFormatTest::Test20358_GroupingInPattern() {
@@ -9746,6 +9818,20 @@ void NumberFormatTest::Test13734_StrictFlexibleWhitespace() {
         df.parse("+  33", result, ppos);
         assertEquals("ppos : ", 0, ppos.getIndex());
         assertEquals("result : ", "0", result.getDecimalNumber(status).data());
+    }
+}
+
+void NumberFormatTest::Test20961_CurrencyPluralPattern() {
+    IcuTestErrorCode status(*this, "Test20961_CurrencyPluralPattern");
+    {
+        LocalPointer<DecimalFormat> decimalFormat(static_cast<DecimalFormat*>(
+            NumberFormat::createInstance("en-US", UNUM_CURRENCY_PLURAL, status)));
+        if (status.errDataIfFailureAndReset()) {
+            return;
+        }
+        UnicodeString result;
+        decimalFormat->toPattern(result);
+        assertEquals("Currency pattern", u"#,##0.00 ¤¤¤", result);
     }
 }
 
