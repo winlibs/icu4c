@@ -1171,8 +1171,10 @@ void TimeZoneTest::TestCustomParse()
         TimeZone *zone = TimeZone::createTimeZone(id);
         UnicodeString   itsID, temp;
 
-        if (dynamic_cast<OlsonTimeZone *>(zone) != NULL) {
+        OlsonTimeZone *ozone = dynamic_cast<OlsonTimeZone *>(zone);
+        if (ozone != nullptr) {
             logln(id + " -> Olson time zone");
+            ozone->operator=(*ozone);  // self-assignment should be a no-op
         } else {
             zone->getID(itsID);
             int32_t ioffset = zone->getRawOffset()/1000;
@@ -2074,6 +2076,8 @@ void TimeZoneTest::TestCanonicalID() {
         {"Asia/Vientiane", "Asia/Bangkok"},
         {"Atlantic/Jan_Mayen", "Europe/Oslo"},
         {"Atlantic/St_Helena", "Africa/Abidjan"},
+        {"Australia/Currie", "Australia/Hobart"},
+        {"Australia/Tasmania", "Australia/Hobart"},
         {"Europe/Bratislava", "Europe/Prague"},
         {"Europe/Busingen", "Europe/Zurich"},
         {"Europe/Guernsey", "Europe/London"},

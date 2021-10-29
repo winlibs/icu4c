@@ -918,8 +918,8 @@ LocaleTest::TestGetLangsAndCountries()
       ;
 
     /* TODO: Change this test to be more like the cloctst version? */
-    if (testCount != 597)
-        errln("Expected getISOLanguages() to return 597 languages; it returned %d", testCount);
+    if (testCount != 594)
+        errln("Expected getISOLanguages() to return 594 languages; it returned %d", testCount);
     else {
         for (i = 0; i < 15; i++) {
             int32_t j;
@@ -949,8 +949,8 @@ LocaleTest::TestGetLangsAndCountries()
     for(testCount=0;test[testCount];testCount++)
       ;
 
-    if (testCount != 249){
-        errln("Expected getISOCountries to return 249 countries; it returned %d", testCount);
+    if (testCount != 253){
+        errln("Expected getISOCountries to return 253 countries; it returned %d", testCount);
     }else {
         for (i = 0; i < spot2Len; i++) {
             int32_t j;
@@ -2052,6 +2052,10 @@ LocaleTest::TestAddLikelyAndMinimizeSubtags() {
             "nn",
             "nn_Latn_NO",
             "nn"
+        }, {
+            "no",
+            "no_Latn_NO",
+            "no"
         }, {
             "nr",
             "nr_Latn_ZA",
@@ -4736,15 +4740,17 @@ void LocaleTest::TestCanonicalization(void)
         { "zh_CN_CA@collation=pinyin", "zh_CN_CA@collation=pinyin", "zh_CN_CA@collation=pinyin" },
         { "en_US_POSIX", "en_US_POSIX", "en_US_POSIX" }, 
         { "hy_AM_REVISED", "hy_AM_REVISED", "hy_AM_REVISED" }, 
-        { "no_NO_NY", "no_NO_NY", "nb_NO_NY" /* not: "nn_NO" [alan ICU3.0] */ },
-        { "no@ny", "no@ny", "nb__NY" /* not: "nn" [alan ICU3.0] */ }, /* POSIX ID */
-        { "no-no.utf32@B", "no_NO.utf32@B", "nb_NO_B" /* not: "nb_NO_B" [alan ICU3.0] */ }, /* POSIX ID */
+        { "no_NO_NY", "no_NO_NY", "no_NO_NY" /* not: "nn_NO" [alan ICU3.0] */ },
+        { "no@ny", "no@ny", "no__NY" /* not: "nn" [alan ICU3.0] */ }, /* POSIX ID */
+        { "no-no.utf32@B", "no_NO.utf32@B", "no_NO_B" }, /* POSIX ID */
         { "qz-qz@Euro", "qz_QZ@Euro", "qz_QZ_EURO" }, /* qz-qz uses private use iso codes */
         // NOTE: uloc_getName() works on en-BOONT, but Locale() parser considers it BOGUS
         // TODO: unify this behavior
         { "en-BOONT", "en__BOONT", "en__BOONT" }, /* registered name */
         { "de-1901", "de__1901", "de__1901" }, /* registered name */
         { "de-1906", "de__1906", "de__1906" }, /* registered name */
+        // New in CLDR 39 / ICU 69
+        { "nb", "nb", "nb" },
 
         /* posix behavior that used to be performed by getName */
         { "mr.utf8", "mr.utf8", "mr" },
@@ -4752,7 +4758,7 @@ void LocaleTest::TestCanonicalization(void)
         { "x-piglatin_ML.MBE", "x-piglatin_ML.MBE", "x-piglatin_ML" },
         { "i-cherokee_US.utf7", "i-cherokee_US.utf7", "i-cherokee_US" },
         { "x-filfli_MT_FILFLA.gb-18030", "x-filfli_MT_FILFLA.gb-18030", "x-filfli_MT_FILFLA" },
-        { "no-no-ny.utf8@B", "no_NO_NY.utf8@B", "nb_NO_B_NY" /* not: "nn_NO" [alan ICU3.0] */ }, /* @ ignored unless variant is empty */
+        { "no-no-ny.utf8@B", "no_NO_NY.utf8@B", "no_NO_B_NY" /* not: "nn_NO" [alan ICU3.0] */ }, /* @ ignored unless variant is empty */
 
         /* fleshing out canonicalization */
         /* trim space and sort keywords, ';' is separator so not present at end in canonical form */
@@ -4764,7 +4770,7 @@ void LocaleTest::TestCanonicalization(void)
           "en_Hant_IL_VALLEY_GIRL@calendar=Japanese;currency=EUR",
           "en_Hant_IL_GIRL_VALLEY@calendar=Japanese;currency=EUR" },
         /* norwegian is just too weird, if we handle things in their full generality */
-        { "no-Hant-GB_NY@currency=$$$", "no_Hant_GB_NY@currency=$$$", "nb_Hant_GB_NY@currency=$$$" /* not: "nn_Hant_GB@currency=$$$" [alan ICU3.0] */ },
+        { "no-Hant-GB_NY@currency=$$$", "no_Hant_GB_NY@currency=$$$", "no_Hant_GB_NY@currency=$$$" /* not: "nn_Hant_GB@currency=$$$" [alan ICU3.0] */ },
 
         /* test cases reflecting internal resource bundle usage */
         { "root@kw=foo", "root@kw=foo", "root@kw=foo" },
@@ -4916,6 +4922,70 @@ void LocaleTest::TestCanonicalize(void)
 
         // ICU-21344
         { "ku-Arab-NT", "ku-Arab-IQ"},
+
+        // ICU-21402
+        { "und-u-rg-no23", "und-u-rg-no50"},
+        { "und-u-rg-cn11", "und-u-rg-cnbj"},
+        { "und-u-rg-cz10a", "und-u-rg-cz110"},
+        { "und-u-rg-fra", "und-u-rg-frges"},
+        { "und-u-rg-frg", "und-u-rg-frges"},
+        { "und-u-rg-lud", "und-u-rg-lucl"},
+
+        { "und-NO-u-sd-no23", "und-NO-u-sd-no50"},
+        { "und-CN-u-sd-cn11", "und-CN-u-sd-cnbj"},
+        { "und-CZ-u-sd-cz10a", "und-CZ-u-sd-cz110"},
+        { "und-FR-u-sd-fra", "und-FR-u-sd-frges"},
+        { "und-FR-u-sd-frg", "und-FR-u-sd-frges"},
+        { "und-LU-u-sd-lud", "und-LU-u-sd-lucl"},
+
+        // ICU-21550
+        { "und-u-rg-fi01", "und-u-rg-axzzzz"},
+        { "und-u-rg-frcp", "und-u-rg-cpzzzz"},
+        { "und-u-rg-frpm", "und-u-rg-pmzzzz"},
+        { "und-u-rg-usvi", "und-u-rg-vizzzz"},
+        { "und-u-rg-cn91", "und-u-rg-hkzzzz"},
+        { "und-u-rg-nlaw", "und-u-rg-awzzzz"},
+
+        { "und-NO-u-sd-frre", "und-NO-u-sd-rezzzz"},
+        { "und-CN-u-sd-nlcw", "und-CN-u-sd-cwzzzz"},
+        { "und-CZ-u-sd-usgu", "und-CZ-u-sd-guzzzz"},
+        { "und-FR-u-sd-shta", "und-FR-u-sd-tazzzz"},
+        { "und-FR-u-sd-cn71", "und-FR-u-sd-twzzzz"},
+
+
+        // ICU-21401
+        { "cel-gaulish", "xtg"},
+
+        // ICU-21406
+        // Inside T extension
+        //  Case of Script and Region
+        { "ja-kana-jp-t-it-latn-it", "ja-Kana-JP-t-it-latn-it"},
+        { "und-t-zh-hani-tw", "und-t-zh-hani-tw"},
+        { "und-cyrl-t-und-Latn", "und-Cyrl-t-und-latn"},
+        //  Order of singleton
+        { "und-u-ca-roc-t-zh", "und-t-zh-u-ca-roc"},
+        //  Variant subtags are alphabetically ordered.
+        { "sl-t-sl-rozaj-biske-1994", "sl-t-sl-1994-biske-rozaj"},
+        // tfield subtags are alphabetically ordered.
+        // (Also tests subtag case normalisation.)
+        { "DE-T-lv-M0-DIN", "de-t-lv-m0-din"},
+        { "DE-T-M0-DIN-K0-QWERTZ", "de-t-k0-qwertz-m0-din"},
+        { "DE-T-lv-M0-DIN-K0-QWERTZ", "de-t-lv-k0-qwertz-m0-din"},
+        // "true" tvalue subtags aren't removed.
+        // (UTS 35 version 36, §3.2.1 claims otherwise, but tkey must be followed by
+        // tvalue, so that's likely a spec bug in UTS 35.)
+        { "en-t-m0-true", "en-t-m0-true"},
+        // tlang subtags are canonicalised.
+        { "en-t-iw", "en-t-he"},
+        { "en-t-hy-latn-SU", "en-t-hy-latn-am"},
+        { "ru-t-ru-cyrl-SU", "ru-t-ru-cyrl-ru"},
+        { "fr-t-fr-172", "fr-t-fr-ru"},
+        { "und-t-no-latn-BOKMAL", "und-t-nb-latn" },
+        { "und-t-sgn-qAAi-NL", "und-t-dse-zinh" },
+        // alias of tvalue should be replaced
+        { "en-t-m0-NaMeS", "en-t-m0-prprname" },
+        { "en-t-s0-ascii-d0-NaMe", "en-t-d0-charname-s0-ascii" },
+
     };
     int32_t i;
     for (i=0; i < UPRV_LENGTHOF(testCases); i++) {
@@ -5535,6 +5605,31 @@ void LocaleTest::TestForLanguageTag() {
     Locale result_ext = Locale::forLanguageTag(tag_ext, status);
     status.errIfFailureAndReset("\"%s\"", tag_ext);
     assertEquals(tag_ext, loc_ext.getName(), result_ext.getName());
+
+    static const struct {
+        const char *inputTag;    /* input */
+        const char *expectedID; /* expected forLanguageTag().getName() result */
+    } testCases[] = {
+      // ICU-21433
+      {"und-1994-biske-rozaj", "__1994_BISKE_ROZAJ"},
+      {"de-1994-biske-rozaj", "de__1994_BISKE_ROZAJ"},
+      {"und-x-private", "@x=private"},
+      {"de-1994-biske-rozaj-x-private", "de__1994_BISKE_ROZAJ@x=private"},
+      {"und-1994-biske-rozaj-x-private", "__1994_BISKE_ROZAJ@x=private"},
+    };
+    int32_t i;
+    for (i=0; i < UPRV_LENGTHOF(testCases); i++) {
+        UErrorCode status = U_ZERO_ERROR;
+        std::string otag = testCases[i].inputTag;
+        std::string tag = Locale::forLanguageTag(otag.c_str(), status).getName();
+        if (tag != testCases[i].expectedID) {
+            errcheckln(status, "FAIL: %s should be toLanguageTag to %s but got %s - %s",
+                       otag.c_str(),
+                       testCases[i].expectedID,
+                       tag.c_str(),
+                       u_errorName(status));
+        }
+    }
 }
 
 void LocaleTest::TestToLanguageTag() {
@@ -5594,6 +5689,33 @@ void LocaleTest::TestToLanguageTag() {
     std::string result_bogus = loc_bogus.toLanguageTag<std::string>(status);
     assertEquals("bogus", U_ILLEGAL_ARGUMENT_ERROR, status.reset());
     assertTrue(result_bogus.c_str(), result_bogus.empty());
+
+    static const struct {
+        const char *localeID;    /* input */
+        const char *expectedID; /* expected toLanguageTag() result */
+    } testCases[] = {
+      /* ICU-21414 */
+      {"und-x-abc-private", "und-x-abc-private"},
+      {"und-x-private", "und-x-private"},
+      {"und-u-ca-roc-x-private", "und-u-ca-roc-x-private"},
+      {"und-US-x-private", "und-US-x-private"},
+      {"und-Latn-x-private", "und-Latn-x-private"},
+      {"und-1994-biske-rozaj", "und-1994-biske-rozaj"},
+      {"und-1994-biske-rozaj-x-private", "und-1994-biske-rozaj-x-private"},
+    };
+    int32_t i;
+    for (i=0; i < UPRV_LENGTHOF(testCases); i++) {
+        UErrorCode status = U_ZERO_ERROR;
+        std::string otag = testCases[i].localeID;
+        std::string tag = Locale::forLanguageTag(otag.c_str(), status).toLanguageTag<std::string>(status);
+        if (tag != testCases[i].expectedID) {
+            errcheckln(status, "FAIL: %s should be toLanguageTag to %s but got %s - %s",
+                       otag.c_str(),
+                       testCases[i].expectedID,
+                       tag.c_str(),
+                       u_errorName(status));
+        }
+    }
 }
 
 /* ICU-20310 */
