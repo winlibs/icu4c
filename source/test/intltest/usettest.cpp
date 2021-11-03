@@ -94,11 +94,13 @@ UnicodeSetTest::runIndexedTest(int32_t index, UBool exec,
     TESTCASE_AUTO(TestFreezable);
     TESTCASE_AUTO(TestSpan);
     TESTCASE_AUTO(TestStringSpan);
-    TESTCASE_AUTO(TestUCAUnsafeBackwards);
+    TESTCASE_AUTO(TestPatternWithSurrogates);
     TESTCASE_AUTO(TestIntOverflow);
     TESTCASE_AUTO(TestUnusedCcc);
     TESTCASE_AUTO(TestDeepPattern);
     TESTCASE_AUTO(TestEmptyString);
+    TESTCASE_AUTO(TestSkipToStrings);
+    TESTCASE_AUTO(TestPatternCodePointComplement);
     TESTCASE_AUTO_END;
 }
 
@@ -882,6 +884,8 @@ void UnicodeSetTest::TestStrings() {
     if (U_FAILURE(ec)) {
         errln("FAIL: couldn't construct test sets");
     }
+    assertFalse("[a-c].hasStrings()", testList[0]->hasStrings());
+    assertTrue("[{ll}{ch}a-z].hasStrings()", testList[2]->hasStrings());
 
     for (int32_t i = 0; testList[i] != NULL; i+=2) {
         if (U_SUCCESS(ec)) {
@@ -896,7 +900,7 @@ void UnicodeSetTest::TestStrings() {
         }
         delete testList[i];
         delete testList[i+1];
-    }        
+    }
 }
 
 /**
@@ -1081,12 +1085,12 @@ void UnicodeSetTest::TestPropertySet() {
 
         "[:Assigned:]",
         "A\\uE000\\uF8FF\\uFDC7\\U00010000\\U0010FFFD",
-        "\\u0888\\uFDD3\\uFFFE\\U00050005",
+        "\\u0558\\uFDD3\\uFFFE\\U00050005",
 
         // Script_Extensions, new in Unicode 6.0
         "[:scx=Arab:]",
         "\\u061E\\u061F\\u0620\\u0621\\u063F\\u0640\\u0650\\u065E\\uFDF1\\uFDF2\\uFDF3",
-        "\\u061D\\uFDEF\\uFDFE",
+        "\\u088F\\uFDEF\\uFEFE",
 
         // U+FDF2 has Script=Arabic and also Arab in its Script_Extensions,
         // so scx-sc is missing U+FDF2.
@@ -1630,14 +1634,14 @@ public:
     /**
      * SymbolTable API
      */
-    virtual const UnicodeString* lookup(const UnicodeString& s) const {
+    virtual const UnicodeString* lookup(const UnicodeString& s) const override {
         return (const UnicodeString*) contents.get(s);
     }
 
     /**
      * SymbolTable API
      */
-    virtual const UnicodeFunctor* lookupMatcher(UChar32 /*ch*/) const {
+    virtual const UnicodeFunctor* lookupMatcher(UChar32 /*ch*/) const override {
         return NULL;
     }
 
@@ -1645,7 +1649,7 @@ public:
      * SymbolTable API
      */
     virtual UnicodeString parseReference(const UnicodeString& text,
-                                         ParsePosition& pos, int32_t limit) const {
+                                         ParsePosition& pos, int32_t limit) const override {
         int32_t start = pos.getIndex();
         int32_t i = start;
         UnicodeString result;
@@ -3905,60 +3909,47 @@ void UnicodeSetTest::TestStringSpan() {
     }
 }
 
-/**
- * Including collationroot.h fails here with
-1>c:\Program Files (x86)\Microsoft SDKs\Windows\v7.0A\include\driverspecs.h(142): error C2008: '$' : unexpected in macro definition
- *  .. so, we skip this test on Windows.
- * 
- * the cause is that  intltest builds with /Za which disables language extensions - which means
- *  windows header files can't be used.
- */
-#if !UCONFIG_NO_COLLATION && !U_PLATFORM_HAS_WIN32_API
-#include "collationroot.h"
-#include "collationtailoring.h"
-#endif
+void UnicodeSetTest::TestPatternWithSurrogates() {
+    IcuTestErrorCode errorCode(*this, "TestPatternWithSurrogates");
+    // Regression test for ICU-11891
+    UnicodeSet surrogates;
+    surrogates.add(0xd000, 0xd82f);  // a range ending with a lead surrogate code point
+    surrogates.add(0xd83a);  // a lead surrogate
+    surrogates.add(0xdc00, 0xdfff);  // a range of trail surrogates
+    UnicodeString pat;
+    surrogates.toPattern(pat, false);  // bad if U+D83A is immediately followed by U+DC00
+    UnicodeSet s2;
+    // was: U_MALFORMED_SET
+    // Java: IllegalArgumentException: Error: Invalid range at "[...\U0001E800-\uDFFF|...]"
+    s2.applyPattern(pat, errorCode);
+    if (errorCode.errIfFailureAndReset("surrogates (1) to/from pattern")) { return; }
+    checkEqual(surrogates, s2, "surrogates (1) to/from pattern");
 
-void UnicodeSetTest::TestUCAUnsafeBackwards() {
-#if U_PLATFORM_HAS_WIN32_API
-    infoln("Skipping TestUCAUnsafeBackwards() - can't include collationroot.h on Windows without language extensions!");
-#elif !UCONFIG_NO_COLLATION
-    UErrorCode errorCode = U_ZERO_ERROR;
+    // create a range of DBFF-DC00, and in the complement form a range of DC01-DC03
+    surrogates.add(0xdbff).remove(0xdc01, 0xdc03);
+    // add a beyond-surrogates range, up to the last code point
+    surrogates.add(0x10affe, 0x10ffff);
+    surrogates.toPattern(pat, false);  // bad if U+DBFF is immediately followed by U+DC00
+    s2.applyPattern(pat, errorCode);
+    if (errorCode.errIfFailureAndReset("surrogates (2) to/from pattern")) { return; }
+    checkEqual(surrogates, s2, "surrogates (2) to/from pattern");
 
-    // Get the unsafeBackwardsSet
-    const CollationCacheEntry *rootEntry = CollationRoot::getRootCacheEntry(errorCode);
-    if(U_FAILURE(errorCode)) {
-      dataerrln("FAIL: %s getting root cache entry", u_errorName(errorCode));
-      return;
-    }
-    //const UVersionInfo &version = rootEntry->tailoring->version;
-    const UnicodeSet *unsafeBackwardSet = rootEntry->tailoring->unsafeBackwardSet;
+    // Test the toPattern() code path when the pattern is shorter in complement form:
+    // [^opposite-ranges]
+    surrogates.add(0, 0x6789);
+    surrogates.toPattern(pat, false);
+    s2.applyPattern(pat, errorCode);
+    if (errorCode.errIfFailureAndReset("surrogates (3) to/from pattern")) { return; }
+    checkEqual(surrogates, s2, "surrogates (3) to/from pattern");
 
-    checkSerializeRoundTrip(*unsafeBackwardSet, errorCode);
-
-    if(!logKnownIssue("11891","UnicodeSet fails to round trip on CollationRoot...unsafeBackwards set")) {
-        // simple test case
-        // TODO(ticket #11891): Simplify this test function to this simple case. Rename it appropriately.
-        // TODO(ticket #11891): Port test to Java. Is this a bug there, too?
-        UnicodeSet surrogates;
-        surrogates.add(0xd83a);  // a lead surrogate
-        surrogates.add(0xdc00, 0xdfff);  // a range of trail surrogates
-        UnicodeString pat;
-        surrogates.toPattern(pat, FALSE);  // bad: [ 0xd83a, 0xdc00, 0x2d, 0xdfff ]
-        // TODO: Probably fix either UnicodeSet::_generatePattern() or _appendToPat()
-        // so that at least one type of surrogate code points are escaped,
-        // or (minimally) so that adjacent lead+trail surrogate code points are escaped.
-        errorCode = U_ZERO_ERROR;
-        UnicodeSet s2;
-        s2.applyPattern(pat, errorCode);  // looks like invalid range [ 0x1e800, 0x2d, 0xdfff ]
-        if(U_FAILURE(errorCode)) {
-            errln("FAIL: surrogates to/from pattern - %s", u_errorName(errorCode));
-        } else {
-            checkEqual(surrogates, s2, "surrogates to/from pattern");
-        }
-        // This occurs in the UCA unsafe-backwards set.
-        checkRoundTrip(*unsafeBackwardSet);
-    }
-#endif
+    // Start with a pattern, in case the original pattern is kept but
+    // without the extra white space.
+    surrogates.applyPattern(u"[\\uD83A \\uDC00-\\uDFFF]", errorCode);
+    if (errorCode.errIfFailureAndReset("surrogates from pattern")) { return; }
+    surrogates.toPattern(pat, false);
+    s2.applyPattern(pat, errorCode);
+    if (errorCode.errIfFailureAndReset("surrogates from/to/from pattern")) { return; }
+    checkEqual(surrogates, s2, "surrogates from/to/from pattern");
 }
 
 void UnicodeSetTest::TestIntOverflow() {
@@ -4058,4 +4049,130 @@ void UnicodeSetTest::TestEmptyString() {
     assertEquals("frozen spanBack", 2, set.spanBack(u"abc", 3, USET_SPAN_SIMPLE));
     assertTrue("frozen containsNone", set.containsNone(u"def"));
     assertFalse("frozen containsSome", set.containsSome(u"def"));
+}
+
+void UnicodeSetTest::assertNext(UnicodeSetIterator &iter, const UnicodeString &expected) {
+    assertTrue(expected + ".next()", iter.next());
+    assertEquals(expected + ".getString()", expected, iter.getString());
+}
+
+void UnicodeSetTest::TestSkipToStrings() {
+    IcuTestErrorCode errorCode(*this, "TestSkipToStrings");
+    UnicodeSet set(u"[0189{}{ch}]", errorCode);
+    UnicodeSetIterator iter(set);
+    assertNext(iter.skipToStrings(), u"");
+    assertNext(iter, u"ch");
+    assertFalse("no next", iter.next());
+
+    iter.reset();
+    assertNext(iter, u"0");
+    assertNext(iter, u"1");
+    assertNext(iter, u"8");
+    assertNext(iter, u"9");
+    assertNext(iter, u"");
+    assertNext(iter, u"ch");
+    assertFalse("no next", iter.next());
+
+    iter.reset();
+    assertNext(iter, u"0");
+    iter.skipToStrings();
+    assertNext(iter, u"");
+    assertNext(iter, u"ch");
+    assertFalse("no next", iter.next());
+
+    iter.reset();
+    iter.nextRange();
+    assertNext(iter, u"8");
+    iter.skipToStrings();
+    assertNext(iter, u"");
+    assertNext(iter, u"ch");
+    assertFalse("no next", iter.next());
+
+    iter.reset();
+    iter.nextRange();
+    iter.nextRange();
+    iter.nextRange();
+    iter.skipToStrings();
+    assertNext(iter, u"ch");
+    assertFalse("no next", iter.next());
+}
+
+void UnicodeSetTest::TestPatternCodePointComplement() {
+    IcuTestErrorCode errorCode(*this, "TestPatternCodePointComplement");
+    // ICU-21524 changes pattern ^ and equivalent functions to perform a "code point complement".
+    // [^abc{ch}] = [[:Any:]-[abc{ch}]] which removes all strings.
+    {
+        UnicodeSet simple(u"[^abc{ch}]", errorCode);
+        assertEquals("[^abc{ch}] --> lots of elements", 0x110000 - 3, simple.size());
+        assertFalse("[^abc{ch}] --> no strings", simple.hasStrings());
+        assertFalse("[^abc{ch}] --> no 'a'", simple.contains(u'a'));
+    }
+
+    {
+        UnicodeSet notBasic(u"[:^Basic_Emoji:]", errorCode);
+        if (errorCode.errDataIfFailureAndReset("[:^Basic_Emoji:]")) {
+            return;
+        }
+        assertTrue("[:^Basic_Emoji:] --> lots of elements", notBasic.size() > 1000);
+        assertFalse("[:^Basic_Emoji:] --> no strings", notBasic.hasStrings());
+        assertFalse("[:^Basic_Emoji:] --> no bicycle", notBasic.contains(U'🚲'));
+    }
+
+    {
+        UnicodeSet notBasic(u"[:Basic_Emoji=No:]", errorCode);
+        assertTrue("[:Basic_Emoji=No:] --> lots of elements", notBasic.size() > 1000);
+        assertFalse("[:Basic_Emoji=No:] --> no strings", notBasic.hasStrings());
+        assertFalse("[:Basic_Emoji=No:] --> no bicycle", notBasic.contains(U'🚲'));
+    }
+
+    {
+        UnicodeSet notBasic;
+        notBasic.applyIntPropertyValue(UCHAR_BASIC_EMOJI, 0, errorCode);
+        assertTrue("[].applyIntPropertyValue(Basic_Emoji, 0) --> lots of elements",
+                notBasic.size() > 1000);
+        assertFalse("[].applyIntPropertyValue(Basic_Emoji, 0) --> no strings",
+                notBasic.hasStrings());
+        assertFalse("[].applyIntPropertyValue(Basic_Emoji, 0) --> no bicycle",
+                notBasic.contains(U'🚲'));
+    }
+
+    {
+        UnicodeSet notBasic;
+        notBasic.applyPropertyAlias("Basic_Emoji", "No", errorCode);
+        assertTrue("[].applyPropertyAlias(Basic_Emoji, No) --> lots of elements",
+                notBasic.size() > 1000);
+        assertFalse("[].applyPropertyAlias(Basic_Emoji, No) --> no strings",
+                notBasic.hasStrings());
+        assertFalse("[].applyPropertyAlias(Basic_Emoji, No) --> no bicycle",
+                notBasic.contains(U'🚲'));
+    }
+
+    // When there are strings, we must not use the complement for a more compact toPattern().
+    {
+        UnicodeSet set;
+        set.add(0,  u'Y').add(u'b', u'q').add(u'x', 0x10ffff);
+        UnicodeString pattern;
+        set.toPattern(pattern, true);
+        UnicodeSet set2(pattern, errorCode);
+        checkEqual(set, set2, "set(with 0 & max, only code points) pattern round-trip");
+        assertEquals("set(with 0 & max, only code points).toPattern()", u"[^Z-ar-w]", pattern);
+
+        set.add("ch").add("ss");
+        set.toPattern(pattern, true);
+        set2 = UnicodeSet(pattern, errorCode);
+        checkEqual(set, set2, "set(with 0 & max, with strings) pattern round-trip");
+        assertEquals("set(with 0 & max, with strings).toPattern()",
+                u"[\\u0000-Yb-qx-\\U0010FFFF{ch}{ss}]", pattern);
+    }
+
+    // The complement() API behavior does not change under this ticket.
+    {
+        UnicodeSet notBasic(u"[:Basic_Emoji:]", errorCode);
+        notBasic.complement();
+        assertTrue("[:Basic_Emoji:].complement() --> lots of elements", notBasic.size() > 1000);
+        assertTrue("[:Basic_Emoji:].complement() --> has strings", notBasic.hasStrings());
+        assertTrue("[:Basic_Emoji:].complement().contains(chipmunk+emoji)",
+                notBasic.contains(u"🐿\uFE0F"));
+        assertFalse("[:Basic_Emoji:].complement() --> no bicycle", notBasic.contains(U'🚲'));
+    }
 }

@@ -239,8 +239,10 @@ void LocaleTest::runIndexedTest( int32_t index, UBool exec, const char* &name, c
     TESTCASE_AUTO(TestKeywordVariantParsing);
     TESTCASE_AUTO(TestCreateKeywordSet);
     TESTCASE_AUTO(TestCreateKeywordSetEmpty);
+    TESTCASE_AUTO(TestCreateKeywordSetWithPrivateUse);
     TESTCASE_AUTO(TestCreateUnicodeKeywordSet);
     TESTCASE_AUTO(TestCreateUnicodeKeywordSetEmpty);
+    TESTCASE_AUTO(TestCreateUnicodeKeywordSetWithPrivateUse);
     TESTCASE_AUTO(TestGetKeywordValueStdString);
     TESTCASE_AUTO(TestGetUnicodeKeywordValueStdString);
     TESTCASE_AUTO(TestSetKeywordValue);
@@ -263,6 +265,7 @@ void LocaleTest::runIndexedTest( int32_t index, UBool exec, const char* &name, c
     TESTCASE_AUTO(TestKnownCanonicalizedListCorrect);
     TESTCASE_AUTO(TestConstructorAcceptsBCP47);
     TESTCASE_AUTO(TestForLanguageTag);
+    TESTCASE_AUTO(TestForLanguageTagLegacyTagBug21676);
     TESTCASE_AUTO(TestToLanguageTag);
     TESTCASE_AUTO(TestToLanguageTagOmitTrue);
     TESTCASE_AUTO(TestMoveAssign);
@@ -282,6 +285,9 @@ void LocaleTest::runIndexedTest( int32_t index, UBool exec, const char* &name, c
     TESTCASE_AUTO(TestSetUnicodeKeywordValueNullInLongLocale);
     TESTCASE_AUTO(TestCanonicalize);
     TESTCASE_AUTO(TestLeak21419);
+    TESTCASE_AUTO(TestNullDereferenceWrite21597);
+    TESTCASE_AUTO(TestLongLocaleSetKeywordAssign);
+    TESTCASE_AUTO(TestLongLocaleSetKeywordMoveAssign);
     TESTCASE_AUTO_END;
 }
 
@@ -4085,6 +4091,27 @@ LocaleTest::TestCreateKeywordSetEmpty(void) {
 }
 
 void
+LocaleTest::TestCreateKeywordSetWithPrivateUse(void) {
+    IcuTestErrorCode status(*this, "TestCreateKeywordSetWithPrivateUse()");
+
+    static const char tag[] = "en-US-u-ca-gregory-x-foo";
+    static const Locale l = Locale::forLanguageTag(tag, status);
+    std::set<std::string> result;
+    l.getKeywords<std::string>(
+                 std::insert_iterator<decltype(result)>(result, result.begin()),
+            status);
+    status.errIfFailureAndReset("getKeywords \"%s\"", l.getName());
+    assertTrue("getKeywords set::find(\"calendar\")",
+               result.find("calendar") != result.end());
+    assertTrue("getKeywords set::find(\"ca\")",
+               result.find("ca") == result.end());
+    assertTrue("getKeywords set::find(\"x\")",
+               result.find("x") != result.end());
+    assertTrue("getKeywords set::find(\"foo\")",
+               result.find("foo") == result.end());
+}
+
+void
 LocaleTest::TestCreateUnicodeKeywordSet(void) {
     IcuTestErrorCode status(*this, "TestCreateUnicodeKeywordSet()");
 
@@ -4116,6 +4143,26 @@ LocaleTest::TestCreateUnicodeKeywordSetEmpty(void) {
     status.errIfFailureAndReset("\"%s\"", l.getName());
 
     assertEquals("set::size()", 0, static_cast<int32_t>(result.size()));
+}
+
+void
+LocaleTest::TestCreateUnicodeKeywordSetWithPrivateUse(void) {
+    IcuTestErrorCode status(*this, "TestCreateUnicodeKeywordSetWithPrivateUse()");
+
+    static const char tag[] = "en-US-u-ca-gregory-x-foo";
+    static const Locale l = Locale::forLanguageTag(tag, status);
+
+    std::set<std::string> result;
+    l.getUnicodeKeywords<std::string>(
+            std::insert_iterator<decltype(result)>(result, result.begin()),
+            status);
+    status.errIfFailureAndReset("getUnicodeKeywords \"%s\"", l.getName());
+    assertTrue("getUnicodeKeywords set::find(\"ca\")",
+               result.find("ca") != result.end());
+    assertTrue("getUnicodeKeywords set::find(\"x\")",
+               result.find("x") == result.end());
+    assertTrue("getUnicodeKeywords set::find(\"foo\")",
+               result.find("foo") == result.end());
 }
 
 void
@@ -4758,7 +4805,7 @@ void LocaleTest::TestCanonicalization(void)
         { "x-piglatin_ML.MBE", "x-piglatin_ML.MBE", "x-piglatin_ML" },
         { "i-cherokee_US.utf7", "i-cherokee_US.utf7", "i-cherokee_US" },
         { "x-filfli_MT_FILFLA.gb-18030", "x-filfli_MT_FILFLA.gb-18030", "x-filfli_MT_FILFLA" },
-        { "no-no-ny.utf8@B", "no_NO_NY.utf8@B", "no_NO_B_NY" /* not: "nn_NO" [alan ICU3.0] */ }, /* @ ignored unless variant is empty */
+        { "no-no-ny.utf8@B", "no_NO_NY.utf8@B", "no_NO@b=ny" /* not: "nn_NO" [alan ICU3.0] */ }, /* @ ignored unless variant is empty */
 
         /* fleshing out canonicalization */
         /* trim space and sort keywords, ';' is separator so not present at end in canonical form */
@@ -4985,7 +5032,6 @@ void LocaleTest::TestCanonicalize(void)
         // alias of tvalue should be replaced
         { "en-t-m0-NaMeS", "en-t-m0-prprname" },
         { "en-t-s0-ascii-d0-NaMe", "en-t-d0-charname-s0-ascii" },
-
     };
     int32_t i;
     for (i=0; i < UPRV_LENGTHOF(testCases); i++) {
@@ -5630,6 +5676,26 @@ void LocaleTest::TestForLanguageTag() {
                        u_errorName(status));
         }
     }
+}
+
+void LocaleTest::TestForLanguageTagLegacyTagBug21676() {
+    IcuTestErrorCode status(*this, "TestForLanguageTagLegacyTagBug21676()");
+  std::string tag(
+      "i-enochian-1nochian-129-515VNTR-64863775-X3il6-110Y101-29-515VNTR-"
+      "64863775-153zu-u-Y4-H0-t6-X3-u6-110Y101-X");
+  std::string input(tag);
+  input += "EXTRA MEMORY AFTER NON-NULL TERMINATED STRING";
+  StringPiece stringp(input.c_str(), tag.length());
+  std::string name = Locale::forLanguageTag(stringp, status).getName();
+  std::string expected(
+      "@x=i-enochian-1nochian-129-515vntr-64863775-x3il6-110y101-29-515vntr-"
+      "64863775-153zu-u-y4-h0-t6-x3-u6-110y101-x");
+  if (name != expected) {
+      errcheckln(
+          status,
+          "FAIL: forLanguageTag('%s', \n%d).getName() should be \n'%s' but got %s",
+          tag.c_str(), tag.length(), expected.c_str(), name.c_str());
+  }
 }
 
 void LocaleTest::TestToLanguageTag() {
@@ -6477,6 +6543,30 @@ void LocaleTest::TestSetUnicodeKeywordValueInLongLocale() {
     }
 }
 
+void LocaleTest::TestLongLocaleSetKeywordAssign() {
+    IcuTestErrorCode status(*this, "TestLongLocaleSetKeywordAssign");
+    // A long base name, with an illegal keyword and copy constructor
+    icu::Locale l("de_AAAAAAA1_AAAAAAA2_AAAAAAA3_AAAAAAA4_AAAAAAA5_AAAAAAA6_"
+                  "AAAAAAA7_AAAAAAA8_AAAAAAA9_AAAAAA10_AAAAAA11_AAAAAA12_"
+                  "AAAAAA13_AAAAAA14_AAAAAA15_AAAAAA16_AAAAAA17_AAAAAA18");
+    Locale l2;
+    l.setUnicodeKeywordValue("co", "12", status); // Cause an error
+    status.reset();
+    l2 = l; // copy operator on such bogus locale.
+}
+
+void LocaleTest::TestLongLocaleSetKeywordMoveAssign() {
+    IcuTestErrorCode status(*this, "TestLongLocaleSetKeywordMoveAssign");
+    // A long base name, with an illegal keyword and copy constructor
+    icu::Locale l("de_AAAAAAA1_AAAAAAA2_AAAAAAA3_AAAAAAA4_AAAAAAA5_AAAAAAA6_"
+                  "AAAAAAA7_AAAAAAA8_AAAAAAA9_AAAAAA10_AAAAAA11_AAAAAA12_"
+                  "AAAAAA13_AAAAAA14_AAAAAA15_AAAAAA16_AAAAAA17");
+    Locale l2;
+    l.setUnicodeKeywordValue("co", "12", status); // Cause an error
+    status.reset();
+    Locale l3 = std::move(l); // move assign
+}
+
 void LocaleTest::TestSetUnicodeKeywordValueNullInLongLocale() {
     IcuTestErrorCode status(*this, "TestSetUnicodeKeywordValueNullInLongLocale");
     const char *exts[] = {"cf", "cu", "em", "kk", "kr", "ks", "kv", "lb", "lw",
@@ -6514,6 +6604,13 @@ void LocaleTest::TestSetUnicodeKeywordValueNullInLongLocale() {
 void LocaleTest::TestLeak21419() {
     IcuTestErrorCode status(*this, "TestLeak21419");
     Locale l = Locale("s-yU");
+    l.canonicalize(status);
+    status.expectErrorAndReset(U_ILLEGAL_ARGUMENT_ERROR);
+}
+
+void LocaleTest::TestNullDereferenceWrite21597() {
+    IcuTestErrorCode status(*this, "TestNullDereferenceWrite21597");
+    Locale l = Locale("zu-t-q5-X1-vKf-KK-Ks-cO--Kc");
     l.canonicalize(status);
     status.expectErrorAndReset(U_ILLEGAL_ARGUMENT_ERROR);
 }

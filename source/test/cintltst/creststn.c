@@ -250,7 +250,6 @@ void addNEWResourceBundleTest(TestNode** root)
     addTest(root, &TestGetKeywordValues,      "tsutil/creststn/TestGetKeywordValues"); 
     addTest(root, &TestGetFunctionalEquivalent,"tsutil/creststn/TestGetFunctionalEquivalent");
     addTest(root, &TestJB3763,                "tsutil/creststn/TestJB3763");
-    addTest(root, &TestStackReuse,            "tsutil/creststn/TestStackReuse");
 }
 
 
@@ -519,7 +518,7 @@ static void TestNewTypes() {
     /* if everything is working correctly, the size of this string */
     /* should be 7. Everything else is a wrong answer, esp. 3 and 6*/
 
-    strcpy(action, "getting and testing of string with embeded zero");
+    strcpy(action, "getting and testing of string with embedded zero");
     res = ures_getByKey(theBundle, "zerotest", res, &status);
     CONFIRM_ErrorCode(status, U_ZERO_ERROR);
     CONFIRM_INT_EQ(ures_getType(res), URES_STRING);
@@ -2181,7 +2180,7 @@ static void TestFallback()
         UResourceBundle* myResB = ures_open(NULL,"no_NO_NY",&err);
         UResourceBundle* resLocID = ures_getByKey(myResB, "Version", NULL, &err);
         const UChar* version = NULL;
-        static const UChar versionStr[] = u"39"; // 39 in nn_NO or in a parent bundle/root
+        static const UChar versionStr[] = u"40"; // 40 in nn_NO or in a parent bundle/root
 
         if(U_FAILURE(err)) {
             log_data_err("Expected success when trying to test no_NO_NY aliased to nn_NO for Version "
@@ -2893,23 +2892,6 @@ static void TestFallbackCodes(void) {
   ures_close(fall);
   ures_close(r);
   ures_close(res);
-}
-
-/* This test will crash if this doesn't work. Results don't need testing. */
-static void TestStackReuse(void) {
-    UResourceBundle table;
-    UErrorCode errorCode = U_ZERO_ERROR;
-    UResourceBundle *rb = ures_open(NULL, "en_US", &errorCode);
-
-    if(U_FAILURE(errorCode)) {
-        log_data_err("Could not load en_US locale. status=%s\n",myErrorName(errorCode));
-        return;
-    }
-    ures_initStackObject(&table);
-    ures_getByKeyWithFallback(rb, "Types", &table, &errorCode);
-    ures_getByKeyWithFallback(&table, "collation", &table, &errorCode);
-    ures_close(rb);
-    ures_close(&table);
 }
 
 /* Test ures_getUTF8StringXYZ() --------------------------------------------- */
