@@ -140,7 +140,7 @@ void IntlTestDateTimePatternGeneratorAPI::testAPI(/*char *par*/)
 
     UnicodeString patternResults_de_DE[] = {
         // de_DE                                              // 2 de_DE
-        UnicodeString("01/1999"),                             // 00: yM
+        UnicodeString("1/1999"),                             // 00: yM
         UnicodeString("Jan. 1999"),                           // 01: yMMM
         UnicodeString("13.1.1999"),                           // 02: yMd
         UnicodeString("13. Jan. 1999"),                       // 03: yMMMd
@@ -245,7 +245,7 @@ void IntlTestDateTimePatternGeneratorAPI::testAPI(/*char *par*/)
 
     UnicodeString patternResults_zh_Hans_CN[] = {
         // zh_Hans_CN                                                     // 7 zh_Hans_CN
-        CharsToUnicodeString("1999\\u5E741\\u6708"),                      // 00: yM -> y\u5E74M\u6708
+        CharsToUnicodeString("1999/1"),                                   // 00: yM
         CharsToUnicodeString("1999\\u5E741\\u6708"),                      // 01: yMMM  -> yyyy\u5E74MMM (fixed expected result per ticket:6626:)
         CharsToUnicodeString("1999/1/13"),                                // 02: yMd
         CharsToUnicodeString("1999\\u5E741\\u670813\\u65E5"),             // 03: yMMMd -> yyyy\u5E74MMMd\u65E5 (fixed expected result per ticket:6626:)
@@ -1168,9 +1168,9 @@ void IntlTestDateTimePatternGeneratorAPI::testC() {
             {"zh-TW",  "CCCCm",   "BBBBhh:mm"},
             {"zh-TW",  "CCCCCm",  "BBBBBh:mm"},
             {"zh-TW",  "CCCCCCm", "BBBBBhh:mm"},
-            {"de",     "Cm",      "HH:mm"},
+            {"de",     "Cm",      "H:mm"},
             {"de",     "CCm",     "HH:mm"},
-            {"de",     "CCCm",    "HH:mm"},
+            {"de",     "CCCm",    "H:mm"},
             {"de",     "CCCCm",   "HH:mm"},
             {"en",     "Cm",      "h:mm\\u202Fa"},
             {"en",     "CCm",     "hh:mm\\u202Fa"},
@@ -1384,6 +1384,9 @@ void IntlTestDateTimePatternGeneratorAPI::testJjMapping() {
             continue;
         }
         // Now check that shortPattern and jPattern use the same hour cycle
+        if ((uprv_strncmp(localeID, "csw", 3) == 0 || uprv_strncmp(localeID, "kxv_", 4) == 0) && logKnownIssue("CLDR-17199", "Need timeFormats with h for csw, kxv_Xxxx")) {
+            continue;
+        }
         UnicodeString jPatSkeleton = DateTimePatternGenerator::staticGetSkeleton(jPattern, status);
         UnicodeString shortPatSkeleton = DateTimePatternGenerator::staticGetSkeleton(shortPattern, status);
         if (U_FAILURE(status)) {
@@ -1654,7 +1657,7 @@ void IntlTestDateTimePatternGeneratorAPI::testDateTimePatterns() {
         { "ha", { UnicodeString(u"EEEE d MMMM, y 'da' HH:mm"),
                   UnicodeString(u"d MMMM, y 'da' HH:mm"),
                   UnicodeString(u"d MMM, y, HH:mm"),
-                  UnicodeString(u"y-MM-dd, HH:mm") } },
+                  UnicodeString(u"d/M/y, HH:mm") } },
         { nullptr, { UnicodeString(""), UnicodeString(""), // terminator
                     UnicodeString(""), UnicodeString("") } },
     };
