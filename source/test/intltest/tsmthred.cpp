@@ -207,7 +207,6 @@ void TestArabicShapeThreads::doTailTest() {
             return;
         }
     }
-    return;
 }
 	
 
@@ -825,17 +824,17 @@ void MultithreadTest::TestCollators()
 
     testFile = fopen(buffer, "rb");
 
-    if(testFile == 0) {
+    if (testFile == nullptr) {
         strcpy(buffer+bufLen, "_SHORT");
         strcat(buffer, ext);
         testFile = fopen(buffer, "rb");
 
-        if(testFile == 0) {
+        if (testFile == nullptr) {
             strcpy(buffer+bufLen, "_STUB");
             strcat(buffer, ext);
             testFile = fopen(buffer, "rb");
 
-            if (testFile == 0) {
+            if (testFile == nullptr) {
                 *(buffer+bufLen) = 0;
                 dataerrln("could not open any of the conformance test files, tried opening base %s", buffer);
                 return;

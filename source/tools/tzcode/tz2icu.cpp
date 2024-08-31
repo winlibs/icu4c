@@ -218,7 +218,7 @@ void ZoneInfo::addAlias(int32_t index) {
 
 void ZoneInfo::setAliasTo(int32_t index) {
     assert(index >= 0);
-    assert(aliases.size() == 0);
+    assert(aliases.empty());
     aliasTo = index;
 }
 
@@ -377,7 +377,7 @@ void readzoneinfo(ifstream& file, ZoneInfo& info, bool is64bitData) {
                     // 32bit int by the ICU resource bundle.
                     break;
                 } else {
-                    info.transitions.push_back(Transition(transitionTimes[i], transitionTypes[i]));
+                    info.transitions.emplace_back(transitionTimes[i], transitionTypes[i]);
                 }
             }
     
@@ -393,7 +393,7 @@ void readzoneinfo(ifstream& file, ZoneInfo& info, bool is64bitData) {
         }
     } else {
         for (i=0; i<timecnt; ++i) {
-            info.transitions.push_back(Transition(transitionTimes[i], transitionTypes[i]));
+            info.transitions.emplace_back(transitionTimes[i], transitionTypes[i]);
         }
     }
 
@@ -461,7 +461,7 @@ void readzoneinfo(ifstream& file, ZoneInfo& info, bool is64bitData) {
         for (char* p=str; p<limit; ++p) {
             char* start = p;
             while (*p != 0) ++p;
-            info.abbrs.push_back(string(start, p-start));
+            info.abbrs.emplace_back(start, p - start);
             abbroffset.push_back(start-str);
         }
 
@@ -999,7 +999,7 @@ void readFinalZonesAndRules(istream& in) {
     ruleIDset.clear();
     for_each(finalRules.begin(), finalRules.end(), insertRuleID);
     for_each(finalZones.begin(), finalZones.end(), eraseRuleID);
-    if (ruleIDset.size() != 0) {
+    if (!ruleIDset.empty()) {
         throw invalid_argument("Unused rules");
     }
 }
@@ -1015,7 +1015,7 @@ void ZoneInfo::print(ostream& os, const string& id) const {
   os << "  /* " << id << " */ ";
 
     if (aliasTo >= 0) {
-        assert(aliases.size() == 0);
+        assert(aliases.empty());
         os << ":int { " << aliasTo << " } "; // No endl - save room for comment.
         return;
     }
@@ -1097,7 +1097,7 @@ void ZoneInfo::print(ostream& os, const string& id) const {
     os << " }" << endl;
 
     if (ICU44PLUS) {
-        if (transitions.size() != 0) {
+        if (!transitions.empty()) {
             os << "    typeMap:bin { \"" << hex << setfill('0');
             for (trn = transitions.begin(); trn != transitions.end(); ++trn) {
                 os << setw(2) << trn->type;
@@ -1126,7 +1126,7 @@ void ZoneInfo::print(ostream& os, const string& id) const {
     }
 
     // Alias list, if any
-    if (aliases.size() != 0) {
+    if (!aliases.empty()) {
         first = true;
         if (ICU44PLUS) {
             os << "    links:intvector { ";
@@ -1190,11 +1190,6 @@ ostream& printStringList( ostream& os, const ZoneMap& zoneinfo) {
 // main
 //--------------------------------------------------------------------
 
-// Unary predicate for finding transitions after a given time
-bool isAfter(const Transition t, int64_t thresh) {
-    return t.time >= thresh;
-}
-
 /**
  * A zone type that contains only the raw and dst offset.  Used by the
  * optimizeTypeList() method.
@@ -1245,7 +1240,7 @@ void ZoneInfo::optimizeTypeList() {
         // by inserting the dummy transition indirectly.
 
         // If there are zero transitions and one type, then leave that as-is.
-        if (transitions.size() == 0) {
+        if (transitions.empty()) {
             if (types.size() != 1) {
                 cerr << "Error: transition count = 0, type count = " << types.size() << endl;
             }
@@ -1327,10 +1322,10 @@ void ZoneInfo::optimizeTypeList() {
 
             // Replace type list
             types.clear();
-            types.push_back(initialSimplifiedType);
+            types.emplace_back(initialSimplifiedType);
             for (set<SimplifiedZoneType>::const_iterator i=simpleset.begin(); i!=simpleset.end(); ++i) {
                 if (*i < initialSimplifiedType || initialSimplifiedType < *i) {
-                    types.push_back(*i);
+                    types.emplace_back(*i);
                 }
             }
 
@@ -1371,7 +1366,7 @@ void ZoneInfo::mergeFinalData(const FinalZone& fz) {
 
     vector<Transition>::iterator it =
         find_if(transitions.begin(), transitions.end(),
-                bind2nd(ptr_fun(isAfter), seconds));
+                [seconds](const Transition& t) { return t.time >= seconds; });
     transitions.erase(it, transitions.end());
 
     if (finalYear != -1) {
@@ -1672,7 +1667,7 @@ int main(int argc, char *argv[]) {
                 string zone, country;
                 istringstream is(line);
                 is >> zone >> country;
-                if (zone.size() == 0) continue;
+                if (zone.empty()) continue;
                 if (country.size() < 2) {
                     cerr << "Error: Can't parse " << line << " in " << ICU_REGIONS << endl;
                     return 1;
@@ -1703,8 +1698,8 @@ int main(int argc, char *argv[]) {
             string country, coord, zone;
             istringstream is(line);
             is >> country >> coord >> zone;
-            if (country.size() == 0) continue;
-            if (country.size() != 2 || zone.size() < 1) {
+            if (country.empty()) continue;
+            if (country.size() != 2 || zone.empty()) {
                 cerr << "Error: Can't parse " << line << " in " << zonetab << endl;
                 return 1;
             }

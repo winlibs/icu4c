@@ -12,9 +12,11 @@
 #include "unicode/putil.h"
 #include "unicode/uscript.h"
 #include "unicode/uset.h"
+#include "charstr.h"
 #include "cstring.h"
 #include "hash.h"
 #include "patternprops.h"
+#include "ppucd.h"
 #include "normalizer2impl.h"
 #include "testutil.h"
 #include "uparse.h"
@@ -80,6 +82,9 @@ void UnicodeTest::runIndexedTest( int32_t index, UBool exec, const char* &name, 
     TESTCASE_AUTO(TestPropertyNames);
     TESTCASE_AUTO(TestIDSUnaryOperator);
     TESTCASE_AUTO(TestIDCompatMath);
+    TESTCASE_AUTO(TestBinaryPropertyUsingPpucd);
+    TESTCASE_AUTO(TestIDStatus);
+    TESTCASE_AUTO(TestIDType);
     TESTCASE_AUTO_END;
 }
 
@@ -1023,4 +1028,264 @@ void UnicodeTest::TestIDCompatMath() {
     assertTrue("idcmStart.contains(U+2202)", idcmStart.contains(0x2202));
     assertTrue("idcmStart.contains(U+1D7C3)", idcmStart.contains(0x1D7C3));
     assertFalse("idcmStart.contains(U+1D7C4)", idcmStart.contains(0x1D7C4));
+}
+
+U_NAMESPACE_BEGIN
+
+class BuiltInPropertyNames : public PropertyNames {
+public:
+    ~BuiltInPropertyNames() override {}
+
+    int32_t getPropertyEnum(const char *name) const override {
+        return u_getPropertyEnum(name);
+    }
+
+    int32_t getPropertyValueEnum(int32_t property, const char *name) const override {
+        return u_getPropertyValueEnum((UProperty) property, name);
+    }
+};
+
+U_NAMESPACE_END
+
+void UnicodeTest::TestBinaryPropertyUsingPpucd() {
+    IcuTestErrorCode errorCode(*this, "TestBinaryPropertyUsingPpucd()");
+
+    // Initialize PPUCD parsing object using file in repo and using
+    // property names present in built-in data in ICU
+    char buffer[500];
+    // get path to `source/data/unidata/` including trailing `/`
+    char *unidataPath = getUnidataPath(buffer);
+    if(unidataPath == nullptr) {
+        errln("exiting early because unable to open ppucd.txt from ICU source tree");
+        return;
+    }
+    CharString ppucdPath(unidataPath, errorCode);
+    ppucdPath.appendPathPart("ppucd.txt", errorCode);    
+    PreparsedUCD ppucd(ppucdPath.data(), errorCode);
+    if(errorCode.isFailure()) {
+        errln("unable to open %s - %s\n",
+            ppucdPath.data(), errorCode.errorName());
+        return;
+    }
+    BuiltInPropertyNames builtInPropNames;
+    ppucd.setPropertyNames(&builtInPropNames);
+
+    // Define which binary properties we want to compare
+    constexpr UProperty propsUnderTest[] = {
+        UCHAR_IDS_UNARY_OPERATOR,
+        UCHAR_ID_COMPAT_MATH_START,
+        UCHAR_ID_COMPAT_MATH_CONTINUE,
+    };
+
+    // Allocate & initialize UnicodeSets per binary property from PPUCD data
+    UnicodeSet ppucdPropSets[std::size(propsUnderTest)];
+
+    // Iterate through PPUCD file, accumulating each line's data into each UnicodeSet per property
+    PreparsedUCD::LineType lineType;
+    UnicodeSet newValues;
+    while((lineType=ppucd.readLine(errorCode))!=PreparsedUCD::NO_LINE && errorCode.isSuccess()) {
+        if(ppucd.lineHasPropertyValues()) {
+            const UniProps *lineProps=ppucd.getProps(newValues, errorCode);
+
+            for(uint32_t i = 0; i < std::size(propsUnderTest); i++) {
+                UProperty prop = propsUnderTest[i];
+                if (!newValues.contains(prop)) {
+                    continue;
+                }
+                if (lineProps->binProps[prop]) {
+                    ppucdPropSets[i].add(lineProps->start, lineProps->end);
+                } else {
+                    ppucdPropSets[i].remove(lineProps->start, lineProps->end);
+                }
+            }
+        }
+    }
+
+    if(errorCode.isFailure()) {
+        errln("exiting early due to parsing error");
+        return;
+    }
+
+    // Assert that the PPUCD data and the ICU data are equivalent for all properties
+    for(uint32_t i = 0; i < std::size(propsUnderTest); i++) {
+        UnicodeSet icuPropSet;
+        UProperty prop = propsUnderTest[i];
+        icuPropSet.applyIntPropertyValue(prop, 1, errorCode);
+        std::string msg = 
+            std::string()
+            + "ICU & PPUCD versions of property "
+            + u_getPropertyName(prop, U_LONG_PROPERTY_NAME);
+        assertTrue(msg.c_str(), ppucdPropSets[i] == icuPropSet);
+    }
+}
+
+namespace {
+
+int32_t getIDStatus(UChar32 c) {
+    return u_getIntPropertyValue(c, UCHAR_IDENTIFIER_STATUS);
+}
+
+}  // namespace
+
+void UnicodeTest::TestIDStatus() {
+    IcuTestErrorCode errorCode(*this, "TestIDStatus()");
+    assertEquals("ID_Status(slash)=Restricted", U_ID_STATUS_RESTRICTED, getIDStatus(0x2F));
+    assertEquals("ID_Status(digit 0)=Allowed", U_ID_STATUS_ALLOWED, getIDStatus(0x30));
+    assertEquals("ID_Status(colon)=Allowed", U_ID_STATUS_ALLOWED, getIDStatus(0x3A));
+    assertEquals("ID_Status(semicolon)=Restricted", U_ID_STATUS_RESTRICTED, getIDStatus(0x3B));
+    assertEquals("ID_Status(Greek small alpha)=Allowed", U_ID_STATUS_ALLOWED, getIDStatus(0x03B1));
+    assertEquals("ID_Status(Greek small archaic koppa)=Restricted", U_ID_STATUS_RESTRICTED, getIDStatus(0x03D9));
+    assertEquals("ID_Status(Hangul syllable)=Allowed", U_ID_STATUS_ALLOWED, getIDStatus(0xAC00));
+    assertEquals("ID_Status(surrogate)=Restricted", U_ID_STATUS_RESTRICTED, getIDStatus(0xD800));
+    assertEquals("ID_Status(Arabic tail fragment)=Restricted", U_ID_STATUS_RESTRICTED, getIDStatus(0xFE73));
+    assertEquals("ID_Status(Hentaigana ko-3)=Restricted", U_ID_STATUS_RESTRICTED, getIDStatus(0x1B03A));
+    assertEquals("ID_Status(Katakana small ko)=Allowed", U_ID_STATUS_ALLOWED, getIDStatus(0x1B155));
+    assertEquals("ID_Status(U+2EE5D)=Allowed", U_ID_STATUS_ALLOWED, getIDStatus(0x2EE5D));
+    assertEquals("ID_Status(U+10FFFF)=Restricted", U_ID_STATUS_RESTRICTED, getIDStatus(0x10FFFF));
+
+    // Property names work and get the correct sets.
+    UnicodeSet idStatus(u"[:Identifier_Status=Allowed:]", errorCode);
+    // Unicode 15.1: 112778 Allowed characters; normally grows over time
+    assertTrue("Allowed number of characters", idStatus.size() >= 112778);
+    assertFalse("Allowed.contains(slash)", idStatus.contains(0x2F));
+    assertTrue("Allowed.contains(digit 0)", idStatus.contains(0x30));
+    assertTrue("Allowed.contains(colon)", idStatus.contains(0x3A));
+    assertFalse("Allowed.contains(semicolon)", idStatus.contains(0x3B));
+    assertTrue("Allowed.contains(Greek small alpha)", idStatus.contains(0x03B1));
+    assertFalse("Allowed.contains(Greek small archaic koppa)", idStatus.contains(0x03D9));
+    assertTrue("Allowed.contains(Hangul syllable)", idStatus.contains(0xAC00));
+    assertFalse("Allowed.contains(surrogate)", idStatus.contains(0xD800));
+    assertFalse("Allowed.contains(Arabic tail fragment)", idStatus.contains(0xFE73));
+    assertFalse("Allowed.contains(Hentaigana ko-3)", idStatus.contains(0x1B03A));
+    assertTrue("Allowed.contains(Katakana small ko)", idStatus.contains(0x1B155));
+    assertTrue("Allowed.contains(U+2EE5D)", idStatus.contains(0x2EE5D));
+    assertFalse("Allowed.contains(U+10FFFF)", idStatus.contains(0x10FFFF));
+}
+
+namespace {
+
+UnicodeString getIDTypes(UChar32 c) {
+    UErrorCode errorCode = U_ZERO_ERROR;
+    UIdentifierType types[10];
+    int32_t length = u_getIDTypes(c, types, UPRV_LENGTHOF(types), &errorCode);
+    if (U_FAILURE(errorCode)) {
+        return UnicodeString(u_errorName(errorCode), -1, US_INV);
+    }
+    // The order of values is undefined, but for simplicity we assume the order
+    // that the current implementation yields. Otherwise we would have to sort the values.
+    uint32_t typeBits = 0;
+    UnicodeString result;
+    for (int32_t i = 0; i < length; ++i) {
+        if (i != 0) {
+            result.append(u' ');
+        }
+        auto t = types[i];
+        typeBits |= 1UL << t;
+        const char *s = u_getPropertyValueName(UCHAR_IDENTIFIER_TYPE, t, U_LONG_PROPERTY_NAME);
+        if (s != nullptr) {
+            result.append(UnicodeString(s, -1, US_INV));
+        } else {
+            result.append(u"???");
+        }
+    }
+    // Check that u_hasIDType() agrees.
+    // Includes undefined behavior with t > largest enum constant.
+    for (int32_t i = 0; i < 16; ++i) {
+        UIdentifierType t = (UIdentifierType)i;
+        bool expected = (typeBits & (1UL << i)) != 0;
+        bool actual = u_hasIDType(c, t);
+        if (actual != expected) {
+            result.append(u" != u_hasIDType() ");
+            result = result + i;
+            break;
+        }
+    }
+    return result;
+}
+
+}  // namespace
+
+void UnicodeTest::TestIDType() {
+    IcuTestErrorCode errorCode(*this, "TestIDType()");
+    // Note: Types other than Recommended and Inclusion may well change over time.
+    assertEquals("ID_Type(slash)", u"Not_XID", getIDTypes(0x2F));
+    assertEquals("ID_Type(digit 0)", u"Recommended", getIDTypes(0x30));
+    assertEquals("ID_Type(colon)", u"Inclusion", getIDTypes(0x3A));
+    assertEquals("ID_Type(semicolon)", u"Not_XID", getIDTypes(0x3B));
+    assertEquals("ID_Type(Greek small alpha)", u"Recommended", getIDTypes(0x03B1));
+    assertEquals("ID_Type(Greek small archaic koppa)", u"Obsolete", getIDTypes(0x03D9));
+    assertEquals("ID_Type(Hangul syllable)", u"Recommended", getIDTypes(0xAC00));
+    assertEquals("ID_Type(surrogate)", u"Not_Character", getIDTypes(0xD800));
+    assertEquals("ID_Type(Arabic tail fragment)", u"Technical", getIDTypes(0xFE73));
+    assertEquals("ID_Type(Linear B syllable)", u"Exclusion", getIDTypes(0x10000));
+    assertEquals("ID_Type(Hentaigana ko-3)", u"Obsolete", getIDTypes(0x1B03A));
+    assertEquals("ID_Type(Katakana small ko)", u"Recommended", getIDTypes(0x1B155));
+    assertEquals("ID_Type(U+2EE5D)", u"Recommended", getIDTypes(0x2EE5D));
+    assertEquals("ID_Type(U+10FFFF)", u"Not_Character", getIDTypes(0x10FFFF));
+
+    assertEquals("ID_Type(CYRILLIC THOUSANDS SIGN)", u"Not_XID Obsolete", getIDTypes(0x0482));
+    assertEquals("ID_Type(SYRIAC FEMININE DOT)", u"Technical Limited_Use", getIDTypes(0x0740));
+    assertEquals("ID_Type(NKO LETTER JONA JA)", u"Obsolete Limited_Use", getIDTypes(0x07E8));
+    assertEquals("ID_Type(SYRIAC END OF PARAGRAPH)", u"Not_XID Limited_Use", getIDTypes(0x0700));
+    assertEquals("ID_Type(LATIN SMALL LETTER EZH)=", u"Technical Uncommon_Use", getIDTypes(0x0292));
+    assertEquals("ID_Type(MUSICAL SYMBOL KIEVAN C CLEF)", u"Not_XID Technical Uncommon_Use", getIDTypes(0x1D1DE));
+    assertEquals("ID_Type(MRO LETTER TA)", u"Exclusion Uncommon_Use", getIDTypes(0x16A40));
+    assertEquals("ID_Type(GREEK MUSICAL LEIMMA)", u"Not_XID Obsolete", getIDTypes(0x1D245));
+
+    // error handling
+    UIdentifierType types[2];
+    UErrorCode failure = U_ZERO_ERROR;
+    u_getIDTypes(0, types, -1, &failure);
+    assertEquals("u_getIDTypes(capacity<0)", U_ILLEGAL_ARGUMENT_ERROR, failure);
+
+    failure = U_ZERO_ERROR;
+    u_getIDTypes(0, nullptr, 1, &failure);
+    assertEquals("u_getIDTypes(nullptr)", U_ILLEGAL_ARGUMENT_ERROR, failure);
+
+    failure = U_ZERO_ERROR;
+    int32_t length = u_getIDTypes(0x30, types, 0, &failure);
+    assertEquals("u_getIDTypes(digit 0, capacity 0) overflow", U_BUFFER_OVERFLOW_ERROR, failure);
+    assertEquals("u_getIDTypes(digit 0, capacity 0) length", 1, length);
+
+    failure = U_ZERO_ERROR;
+    length = u_getIDTypes(0x1D1DE, types, 0, &failure);
+    assertEquals("u_getIDTypes(Kievan C clef, capacity 2) overflow", U_BUFFER_OVERFLOW_ERROR, failure);
+    assertEquals("u_getIDTypes(Kievan C clef, capacity 2) length", 3, length);
+
+    // Property names work and get the correct sets.
+    UnicodeSet rec(u"[:Identifier_Type=Recommended:]", errorCode);
+    UnicodeSet incl(u"[:Identifier_Type=Inclusion:]", errorCode);
+    UnicodeSet limited(u"[:Identifier_Type=Limited_Use:]", errorCode);
+    UnicodeSet uncommon(u"[:Identifier_Type=Uncommon_Use:]", errorCode);
+    UnicodeSet notChar(u"[:Identifier_Type=Not_Character:]", errorCode);
+    // Unicode 15.1 set sizes; normally grows over time except Not_Character shrinks
+    assertTrue("Recommended number of characters", rec.size() >= 112761);
+    assertTrue("Inclusion number of characters", incl.size() >= 17);
+    assertTrue("Limited_Use number of characters", limited.size() >= 5268);
+    assertTrue("Uncommon_Use number of characters", uncommon.size() >= 398);
+    assertTrue("Not_Character number of characters",
+               800000 <= notChar.size() && notChar.size() <= 964293);
+    assertFalse("Recommended.contains(slash)", rec.contains(0x2F));
+    assertTrue("Recommended.contains(digit 0)", rec.contains(0x30));
+    assertTrue("Inclusion.contains(colon)", incl.contains(0x3A));
+    assertTrue("Recommended.contains(U+2EE5D)", rec.contains(0x2EE5D));
+    assertTrue("Limited_Use.contains(SYRIAC FEMININE DOT)", limited.contains(0x0740));
+    assertTrue("Limited_Use.contains(NKO LETTER JONA JA)", limited.contains(0x7E8));
+    assertTrue("Not_Character.contains(surrogate)", notChar.contains(0xd800));
+    assertTrue("Not_Character.contains(U+10FFFF)", notChar.contains(0x10FFFF));
+    assertTrue("Uncommon_Use.contains(LATIN SMALL LETTER EZH)", uncommon.contains(0x0292));
+    assertTrue("Uncommon_Use.contains(MUSICAL SYMBOL KIEVAN C CLEF)", uncommon.contains(0x1D1DE));
+
+    // More mutually exclusive types, including some otherwise combinable ones.
+    UnicodeSet dep(u"[:Identifier_Type=Deprecated:]", errorCode);
+    UnicodeSet di(u"[:Identifier_Type=Default_Ignorable:]", errorCode);
+    UnicodeSet notNFKC(u"[:Identifier_Type=Not_NFKC:]", errorCode);
+    UnicodeSet excl(u"[:Identifier_Type=Exclusion:]", errorCode);
+    UnicodeSet allExclusive;
+    allExclusive.addAll(rec).addAll(incl).addAll(limited).addAll(excl).
+        addAll(notNFKC).addAll(di).addAll(dep).addAll(notChar);
+    assertEquals("num chars in mutually exclusive types",
+                rec.size() + incl.size() + limited.size() + excl.size() +
+                    notNFKC.size() + di.size() + dep.size() + notChar.size(),
+                allExclusive.size());
 }

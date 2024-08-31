@@ -144,6 +144,12 @@ void RBBITest::runIndexedTest( int32_t index, UBool exec, const char* &name, cha
     TESTCASE_AUTO(TestRandomAccess);
     TESTCASE_AUTO(TestExternalBreakEngineWithFakeTaiLe);
     TESTCASE_AUTO(TestExternalBreakEngineWithFakeYue);
+    TESTCASE_AUTO(TestBug22579);
+    TESTCASE_AUTO(TestBug22581);
+    TESTCASE_AUTO(TestBug22584);
+    TESTCASE_AUTO(TestBug22585);
+    TESTCASE_AUTO(TestBug22602);
+    TESTCASE_AUTO(TestBug22636);
 
 #if U_ENABLE_TRACING
     TESTCASE_AUTO(TestTraceCreateCharacter);
@@ -889,7 +895,7 @@ void RBBITest::TestExtended() {
             if (localeMatcher.lookingAt(charIdx-1, status)) {
                 UnicodeString localeName = localeMatcher.group(1, status);
                 char localeName8[100];
-                localeName.extract(0, localeName.length(), localeName8, sizeof(localeName8), 0);
+                localeName.extract(0, localeName.length(), localeName8, sizeof(localeName8), nullptr);
                 locale = Locale::createFromName(localeName8);
                 charIdx += localeMatcher.group(0, status).length() - 1;
                 TEST_ASSERT_SUCCESS(status);
@@ -1711,21 +1717,21 @@ RBBICharMonkey::RBBICharMonkey() {
     fSets             = new UVector(status);
 
     // Important: Keep class names the same as the class contents.
-    fSets->addElement(fCRLFSet, status); classNames.push_back("CRLF");
-    fSets->addElement(fControlSet, status); classNames.push_back("Control");
-    fSets->addElement(fExtendSet, status); classNames.push_back("Extended");
-    fSets->addElement(fRegionalIndicatorSet, status); classNames.push_back("RegionalIndicator");
+    fSets->addElement(fCRLFSet, status); classNames.emplace_back("CRLF");
+    fSets->addElement(fControlSet, status); classNames.emplace_back("Control");
+    fSets->addElement(fExtendSet, status); classNames.emplace_back("Extended");
+    fSets->addElement(fRegionalIndicatorSet, status); classNames.emplace_back("RegionalIndicator");
     if (!fPrependSet->isEmpty()) {
-        fSets->addElement(fPrependSet, status); classNames.push_back("Prepend");
+        fSets->addElement(fPrependSet, status); classNames.emplace_back("Prepend");
     }
-    fSets->addElement(fSpacingSet, status); classNames.push_back("Spacing");
-    fSets->addElement(fHangulSet, status); classNames.push_back("Hangul");
-    fSets->addElement(fZWJSet, status); classNames.push_back("ZWJ");
-    fSets->addElement(fExtendedPictSet, status); classNames.push_back("ExtendedPict");
-    fSets->addElement(fViramaSet, status); classNames.push_back("Virama");
-    fSets->addElement(fLinkingConsonantSet, status); classNames.push_back("LinkingConsonant");
-    fSets->addElement(fExtCccZwjSet, status); classNames.push_back("ExtCcccZwj");
-    fSets->addElement(fAnySet, status); classNames.push_back("Any");
+    fSets->addElement(fSpacingSet, status); classNames.emplace_back("Spacing");
+    fSets->addElement(fHangulSet, status); classNames.emplace_back("Hangul");
+    fSets->addElement(fZWJSet, status); classNames.emplace_back("ZWJ");
+    fSets->addElement(fExtendedPictSet, status); classNames.emplace_back("ExtendedPict");
+    fSets->addElement(fViramaSet, status); classNames.emplace_back("Virama");
+    fSets->addElement(fLinkingConsonantSet, status); classNames.emplace_back("LinkingConsonant");
+    fSets->addElement(fExtCccZwjSet, status); classNames.emplace_back("ExtCcccZwj");
+    fSets->addElement(fAnySet, status); classNames.emplace_back("Any");
 
     if (U_FAILURE(status)) {
         deferredStatus = status;
@@ -2034,31 +2040,31 @@ RBBIWordMonkey::RBBIWordMonkey()
     fOtherSet->removeAll(*fDictionarySet);
 
     // Add classes and their names
-    fSets->addElement(fCRSet, status); classNames.push_back("CR");
-    fSets->addElement(fLFSet, status); classNames.push_back("LF");
-    fSets->addElement(fNewlineSet, status); classNames.push_back("Newline");
-    fSets->addElement(fRegionalIndicatorSet, status); classNames.push_back("RegionalIndicator");
-    fSets->addElement(fHebrew_LetterSet, status); classNames.push_back("Hebrew");
-    fSets->addElement(fALetterSet, status); classNames.push_back("ALetter");
-    fSets->addElement(fSingle_QuoteSet, status); classNames.push_back("Single Quote");
-    fSets->addElement(fDouble_QuoteSet, status); classNames.push_back("Double Quote");
+    fSets->addElement(fCRSet, status); classNames.emplace_back("CR");
+    fSets->addElement(fLFSet, status); classNames.emplace_back("LF");
+    fSets->addElement(fNewlineSet, status); classNames.emplace_back("Newline");
+    fSets->addElement(fRegionalIndicatorSet, status); classNames.emplace_back("RegionalIndicator");
+    fSets->addElement(fHebrew_LetterSet, status); classNames.emplace_back("Hebrew");
+    fSets->addElement(fALetterSet, status); classNames.emplace_back("ALetter");
+    fSets->addElement(fSingle_QuoteSet, status); classNames.emplace_back("Single Quote");
+    fSets->addElement(fDouble_QuoteSet, status); classNames.emplace_back("Double Quote");
     // Omit Katakana from fSets, which omits Katakana characters
     // from the test data. They are all in the dictionary set,
     // which this (old, to be retired) monkey test cannot handle.
     //fSets->addElement(fKatakanaSet, status);
 
-    fSets->addElement(fMidLetterSet, status); classNames.push_back("MidLetter");
-    fSets->addElement(fMidNumLetSet, status); classNames.push_back("MidNumLet");
-    fSets->addElement(fMidNumSet, status); classNames.push_back("MidNum");
-    fSets->addElement(fNumericSet, status); classNames.push_back("Numeric");
-    fSets->addElement(fFormatSet, status); classNames.push_back("Format");
-    fSets->addElement(fExtendSet, status); classNames.push_back("Extend");
-    fSets->addElement(fOtherSet, status); classNames.push_back("Other");
-    fSets->addElement(fExtendNumLetSet, status); classNames.push_back("ExtendNumLet");
-    fSets->addElement(fWSegSpaceSet, status); classNames.push_back("WSegSpace");
+    fSets->addElement(fMidLetterSet, status); classNames.emplace_back("MidLetter");
+    fSets->addElement(fMidNumLetSet, status); classNames.emplace_back("MidNumLet");
+    fSets->addElement(fMidNumSet, status); classNames.emplace_back("MidNum");
+    fSets->addElement(fNumericSet, status); classNames.emplace_back("Numeric");
+    fSets->addElement(fFormatSet, status); classNames.emplace_back("Format");
+    fSets->addElement(fExtendSet, status); classNames.emplace_back("Extend");
+    fSets->addElement(fOtherSet, status); classNames.emplace_back("Other");
+    fSets->addElement(fExtendNumLetSet, status); classNames.emplace_back("ExtendNumLet");
+    fSets->addElement(fWSegSpaceSet, status); classNames.emplace_back("WSegSpace");
 
-    fSets->addElement(fZWJSet, status); classNames.push_back("ZWJ");
-    fSets->addElement(fExtendedPictSet, status); classNames.push_back("ExtendedPict");
+    fSets->addElement(fZWJSet, status); classNames.emplace_back("ZWJ");
+    fSets->addElement(fExtendedPictSet, status); classNames.emplace_back("ExtendedPict");
 
     if (U_FAILURE(status)) {
         deferredStatus = status;
@@ -2374,19 +2380,19 @@ RBBISentMonkey::RBBISentMonkey()
     fOtherSet->removeAll(*fCloseSet);
     fOtherSet->removeAll(*fExtendSet);
 
-    fSets->addElement(fSepSet, status); classNames.push_back("Sep");
-    fSets->addElement(fFormatSet, status); classNames.push_back("Format");
-    fSets->addElement(fSpSet, status); classNames.push_back("Sp");
-    fSets->addElement(fLowerSet, status); classNames.push_back("Lower");
-    fSets->addElement(fUpperSet, status); classNames.push_back("Upper");
-    fSets->addElement(fOLetterSet, status); classNames.push_back("OLetter");
-    fSets->addElement(fNumericSet, status); classNames.push_back("Numeric");
-    fSets->addElement(fATermSet, status); classNames.push_back("ATerm");
-    fSets->addElement(fSContinueSet, status); classNames.push_back("SContinue");
-    fSets->addElement(fSTermSet, status); classNames.push_back("STerm");
-    fSets->addElement(fCloseSet, status); classNames.push_back("Close");
-    fSets->addElement(fOtherSet, status); classNames.push_back("Other");
-    fSets->addElement(fExtendSet, status); classNames.push_back("Extend");
+    fSets->addElement(fSepSet, status); classNames.emplace_back("Sep");
+    fSets->addElement(fFormatSet, status); classNames.emplace_back("Format");
+    fSets->addElement(fSpSet, status); classNames.emplace_back("Sp");
+    fSets->addElement(fLowerSet, status); classNames.emplace_back("Lower");
+    fSets->addElement(fUpperSet, status); classNames.emplace_back("Upper");
+    fSets->addElement(fOLetterSet, status); classNames.emplace_back("OLetter");
+    fSets->addElement(fNumericSet, status); classNames.emplace_back("Numeric");
+    fSets->addElement(fATermSet, status); classNames.emplace_back("ATerm");
+    fSets->addElement(fSContinueSet, status); classNames.emplace_back("SContinue");
+    fSets->addElement(fSTermSet, status); classNames.emplace_back("STerm");
+    fSets->addElement(fCloseSet, status); classNames.emplace_back("Close");
+    fSets->addElement(fOtherSet, status); classNames.emplace_back("Other");
+    fSets->addElement(fExtendSet, status); classNames.emplace_back("Extend");
 
     if (U_FAILURE(status)) {
         deferredStatus = status;
@@ -2603,7 +2609,6 @@ int32_t RBBISentMonkey::next(int32_t prevPos) {
         }
 
         setAppliedRule(p2, "SB12  Any x Any");
-        continue;
     }
 
     breakPos = p2;
@@ -2793,55 +2798,55 @@ RBBILineMonkey::RBBILineMonkey() :
     fHH->add(u'\u2010');   // Hyphen, '‐'
 
     // Sets and names.
-    fSets->addElement(fBK, status); classNames.push_back("fBK");
-    fSets->addElement(fCR, status); classNames.push_back("fCR");
-    fSets->addElement(fLF, status); classNames.push_back("fLF");
-    fSets->addElement(fCM, status); classNames.push_back("fCM");
-    fSets->addElement(fNL, status); classNames.push_back("fNL");
-    fSets->addElement(fWJ, status); classNames.push_back("fWJ");
-    fSets->addElement(fZW, status); classNames.push_back("fZW");
-    fSets->addElement(fGL, status); classNames.push_back("fGL");
-    fSets->addElement(fCB, status); classNames.push_back("fCB");
-    fSets->addElement(fSP, status); classNames.push_back("fSP");
-    fSets->addElement(fB2, status); classNames.push_back("fB2");
-    fSets->addElement(fBA, status); classNames.push_back("fBA");
-    fSets->addElement(fBB, status); classNames.push_back("fBB");
-    fSets->addElement(fHY, status); classNames.push_back("fHY");
-    fSets->addElement(fH2, status); classNames.push_back("fH2");
-    fSets->addElement(fH3, status); classNames.push_back("fH3");
-    fSets->addElement(fCL, status); classNames.push_back("fCL");
-    fSets->addElement(fCP, status); classNames.push_back("fCP");
-    fSets->addElement(fEX, status); classNames.push_back("fEX");
-    fSets->addElement(fIN, status); classNames.push_back("fIN");
-    fSets->addElement(fJL, status); classNames.push_back("fJL");
-    fSets->addElement(fJT, status); classNames.push_back("fJT");
-    fSets->addElement(fJV, status); classNames.push_back("fJV");
-    fSets->addElement(fNS, status); classNames.push_back("fNS");
-    fSets->addElement(fOP, status); classNames.push_back("fOP");
-    fSets->addElement(fQU, status); classNames.push_back("fQU");
-    fSets->addElement(fIS, status); classNames.push_back("fIS");
-    fSets->addElement(fNU, status); classNames.push_back("fNU");
-    fSets->addElement(fPO, status); classNames.push_back("fPO");
-    fSets->addElement(fPR, status); classNames.push_back("fPR");
-    fSets->addElement(fSY, status); classNames.push_back("fSY");
-    fSets->addElement(fAI, status); classNames.push_back("fAI");
-    fSets->addElement(fAL, status); classNames.push_back("fAL");
-    fSets->addElement(fHL, status); classNames.push_back("fHL");
-    fSets->addElement(fID, status); classNames.push_back("fID");
-    fSets->addElement(fRI, status); classNames.push_back("fRI");
-    fSets->addElement(fSG, status); classNames.push_back("fSG");
-    fSets->addElement(fEB, status); classNames.push_back("fEB");
-    fSets->addElement(fEM, status); classNames.push_back("fEM");
-    fSets->addElement(fZWJ, status); classNames.push_back("fZWJ");
+    fSets->addElement(fBK, status); classNames.emplace_back("fBK");
+    fSets->addElement(fCR, status); classNames.emplace_back("fCR");
+    fSets->addElement(fLF, status); classNames.emplace_back("fLF");
+    fSets->addElement(fCM, status); classNames.emplace_back("fCM");
+    fSets->addElement(fNL, status); classNames.emplace_back("fNL");
+    fSets->addElement(fWJ, status); classNames.emplace_back("fWJ");
+    fSets->addElement(fZW, status); classNames.emplace_back("fZW");
+    fSets->addElement(fGL, status); classNames.emplace_back("fGL");
+    fSets->addElement(fCB, status); classNames.emplace_back("fCB");
+    fSets->addElement(fSP, status); classNames.emplace_back("fSP");
+    fSets->addElement(fB2, status); classNames.emplace_back("fB2");
+    fSets->addElement(fBA, status); classNames.emplace_back("fBA");
+    fSets->addElement(fBB, status); classNames.emplace_back("fBB");
+    fSets->addElement(fHY, status); classNames.emplace_back("fHY");
+    fSets->addElement(fH2, status); classNames.emplace_back("fH2");
+    fSets->addElement(fH3, status); classNames.emplace_back("fH3");
+    fSets->addElement(fCL, status); classNames.emplace_back("fCL");
+    fSets->addElement(fCP, status); classNames.emplace_back("fCP");
+    fSets->addElement(fEX, status); classNames.emplace_back("fEX");
+    fSets->addElement(fIN, status); classNames.emplace_back("fIN");
+    fSets->addElement(fJL, status); classNames.emplace_back("fJL");
+    fSets->addElement(fJT, status); classNames.emplace_back("fJT");
+    fSets->addElement(fJV, status); classNames.emplace_back("fJV");
+    fSets->addElement(fNS, status); classNames.emplace_back("fNS");
+    fSets->addElement(fOP, status); classNames.emplace_back("fOP");
+    fSets->addElement(fQU, status); classNames.emplace_back("fQU");
+    fSets->addElement(fIS, status); classNames.emplace_back("fIS");
+    fSets->addElement(fNU, status); classNames.emplace_back("fNU");
+    fSets->addElement(fPO, status); classNames.emplace_back("fPO");
+    fSets->addElement(fPR, status); classNames.emplace_back("fPR");
+    fSets->addElement(fSY, status); classNames.emplace_back("fSY");
+    fSets->addElement(fAI, status); classNames.emplace_back("fAI");
+    fSets->addElement(fAL, status); classNames.emplace_back("fAL");
+    fSets->addElement(fHL, status); classNames.emplace_back("fHL");
+    fSets->addElement(fID, status); classNames.emplace_back("fID");
+    fSets->addElement(fRI, status); classNames.emplace_back("fRI");
+    fSets->addElement(fSG, status); classNames.emplace_back("fSG");
+    fSets->addElement(fEB, status); classNames.emplace_back("fEB");
+    fSets->addElement(fEM, status); classNames.emplace_back("fEM");
+    fSets->addElement(fZWJ, status); classNames.emplace_back("fZWJ");
     // TODO: fOP30 & fCP30 overlap with plain fOP. Probably OK, but fOP/CP chars will be over-represented.
-    fSets->addElement(fOP30, status); classNames.push_back("fOP30");
-    fSets->addElement(fCP30, status); classNames.push_back("fCP30");
-    fSets->addElement(fExtPictUnassigned, status); classNames.push_back("fExtPictUnassigned");
-    fSets->addElement(fAK, status); classNames.push_back("fAK");
-    fSets->addElement(fAP, status); classNames.push_back("fAP");
-    fSets->addElement(fAS, status); classNames.push_back("fAS");
-    fSets->addElement(fVF, status); classNames.push_back("fVF");
-    fSets->addElement(fVI, status); classNames.push_back("fVI");
+    fSets->addElement(fOP30, status); classNames.emplace_back("fOP30");
+    fSets->addElement(fCP30, status); classNames.emplace_back("fCP30");
+    fSets->addElement(fExtPictUnassigned, status); classNames.emplace_back("fExtPictUnassigned");
+    fSets->addElement(fAK, status); classNames.emplace_back("fAK");
+    fSets->addElement(fAP, status); classNames.emplace_back("fAP");
+    fSets->addElement(fAS, status); classNames.emplace_back("fAS");
+    fSets->addElement(fVF, status); classNames.emplace_back("fVF");
+    fSets->addElement(fVI, status); classNames.emplace_back("fVI");
 
 
     UnicodeString CMx {uR"([[\p{Line_Break=CM}]\u200d])"};
@@ -3538,6 +3543,9 @@ RBBILineMonkey::~RBBILineMonkey() {
 //
 //       type = char | word | line | sent | title
 //
+//       export = (path)   Export test cases to (path)_(type).txt in the UCD
+//                         test case format.
+//
 //  Example:
 //     intltest  rbbi/RBBITest/TestMonkey@"type=line loop=-1"
 //
@@ -3974,6 +3982,8 @@ void RBBITest::TestMonkey() {
     UnicodeString  breakType = "all";
     Locale         locale("en");
     UBool          useUText  = false;
+    UBool          scalarsOnly = false;
+    std::string    exportPath;
 
     if (quick == false) {
         loopCount = 10000;
@@ -3998,6 +4008,19 @@ void RBBITest::TestMonkey() {
             p = u.replaceFirst("", status);
         }
 
+        RegexMatcher pathMatcher(" *export *= *([^ ]+) *", p, 0, status);
+        if (pathMatcher.find()) {
+            pathMatcher.group(1, status).toUTF8String(exportPath);
+            pathMatcher.reset();
+            p = pathMatcher.replaceFirst("", status);
+        }
+
+        RegexMatcher s(" *scalars_only", p, 0, status);
+        if (s.find()) {
+            scalarsOnly = true;
+            s.reset();
+            p = s.replaceFirst("", status);
+        }
 
         // m.reset(p);
         if (RegexMatcher(UNICODE_STRING_SIMPLE("\\S"), p, 0, status).find()) {
@@ -4013,64 +4036,80 @@ void RBBITest::TestMonkey() {
     }
 
     if (breakType == "char" || breakType == "all") {
+        FILE *file = exportPath.empty() ? nullptr : fopen((exportPath + "_char.txt").c_str(), "w");
         RBBICharMonkey  m;
         BreakIterator  *bi = BreakIterator::createCharacterInstance(locale, status);
         if (U_SUCCESS(status)) {
-            RunMonkey(bi, m, "char", seed, loopCount, useUText);
+            RunMonkey(bi, m, "char", seed, loopCount, useUText, file, scalarsOnly);
             if (breakType == "all" && useUText==false) {
                 // Also run a quick test with UText when "all" is specified
-                RunMonkey(bi, m, "char", seed, loopCount, true);
+                RunMonkey(bi, m, "char", seed, loopCount, true, nullptr, scalarsOnly);
             }
         }
         else {
             errcheckln(status, "Creation of character break iterator failed %s", u_errorName(status));
         }
         delete bi;
+        if (file != nullptr) {
+            fclose(file);
+        }
     }
 
     if (breakType == "word" || breakType == "all") {
         logln("Word Break Monkey Test");
+        FILE *file = exportPath.empty() ? nullptr : fopen((exportPath + "_word.txt").c_str(), "w");
         RBBIWordMonkey  m;
         BreakIterator  *bi = BreakIterator::createWordInstance(locale, status);
         if (U_SUCCESS(status)) {
-            RunMonkey(bi, m, "word", seed, loopCount, useUText);
+            RunMonkey(bi, m, "word", seed, loopCount, useUText, file, scalarsOnly);
         }
         else {
             errcheckln(status, "Creation of word break iterator failed %s", u_errorName(status));
         }
         delete bi;
+        if (file != nullptr) {
+            fclose(file);
+        }
     }
 
     if (breakType == "line" || breakType == "all") {
         logln("Line Break Monkey Test");
+        FILE *file = exportPath.empty() ? nullptr : fopen((exportPath + "_line.txt").c_str(), "w");
         RBBILineMonkey  m;
         BreakIterator  *bi = BreakIterator::createLineInstance(locale, status);
         if (loopCount >= 10) {
             loopCount = loopCount / 5;   // Line break runs slower than the others.
         }
         if (U_SUCCESS(status)) {
-            RunMonkey(bi, m, "line", seed, loopCount, useUText);
+            RunMonkey(bi, m, "line", seed, loopCount, useUText, file, scalarsOnly);
         }
         else {
             errcheckln(status, "Creation of line break iterator failed %s", u_errorName(status));
         }
         delete bi;
+        if (file != nullptr) {
+            fclose(file);
+        }
     }
 
     if (breakType == "sent" || breakType == "all"  ) {
         logln("Sentence Break Monkey Test");
+        FILE *file = exportPath.empty() ? nullptr : fopen((exportPath + "_sent.txt").c_str(), "w");
         RBBISentMonkey  m;
         BreakIterator  *bi = BreakIterator::createSentenceInstance(locale, status);
         if (loopCount >= 10) {
             loopCount = loopCount / 10;   // Sentence runs slower than the other break types
         }
         if (U_SUCCESS(status)) {
-            RunMonkey(bi, m, "sent", seed, loopCount, useUText);
+            RunMonkey(bi, m, "sent", seed, loopCount, useUText, file, scalarsOnly);
         }
         else {
             errcheckln(status, "Creation of line break iterator failed %s", u_errorName(status));
         }
         delete bi;
+        if (file != nullptr) {
+            fclose(file);
+        }
     }
 
 #endif
@@ -4079,14 +4118,19 @@ void RBBITest::TestMonkey() {
 //
 //  Run a RBBI monkey test.  Common routine, for all break iterator types.
 //    Parameters:
-//       bi      - the break iterator to use
-//       mk      - MonkeyKind, abstraction for obtaining expected results
-//       name    - Name of test (char, word, etc.) for use in error messages
-//       seed    - Seed for starting random number generator (parameter from user)
+//       bi          - the break iterator to use
+//       mk          - MonkeyKind, abstraction for obtaining expected results
+//       name        - Name of test (char, word, etc.) for use in error messages
+//       seed        - Seed for starting random number generator (parameter from user)
 //       numIterations
+//       exportFile  - Pointer to a file to which the test cases will be written in
+//                     UCD format.  May be null.
+//       scalarsOnly - Only test sequences of Unicode scalar values; if this is false,
+//                     arbitrary sequences of code points (including unpaired surrogates)
+//                     are tested.
 //
 void RBBITest::RunMonkey(BreakIterator *bi, RBBIMonkeyKind &mk, const char *name, uint32_t  seed,
-                         int32_t numIterations, UBool useUText) {
+                         int32_t numIterations, UBool useUText, FILE *exportFile, UBool scalarsOnly) {
 
 #if !UCONFIG_NO_REGULAR_EXPRESSIONS
 
@@ -4151,6 +4195,9 @@ void RBBITest::RunMonkey(BreakIterator *bi, RBBIMonkeyKind &mk, const char *name
                 errln("%s:%d c < 0", __FILE__, __LINE__);
                 break;
             }
+            if (scalarsOnly && U16_IS_SURROGATE(c)) {
+              continue;
+            }
             // Do not assemble a supplementary character from randomly generated separate surrogates.
             //   (It could be a dictionary character)
             if (U16_IS_TRAIL(c) && testText.length() > 0 && U16_IS_LEAD(testText.charAt(testText.length()-1))) {
@@ -4178,6 +4225,7 @@ void RBBITest::RunMonkey(BreakIterator *bi, RBBIMonkeyKind &mk, const char *name
             expectedBreaks[breakPos] = 1;
             expectedCount++;
             U_ASSERT(expectedCount<testText.length());
+	    (void)expectedCount;  // Used by U_ASSERT().
         }
 
         // Find the break positions using forward iteration
@@ -4265,6 +4313,16 @@ void RBBITest::RunMonkey(BreakIterator *bi, RBBIMonkeyKind &mk, const char *name
                 }
                 lastBreakPos = breakPos;
             }
+        }
+
+        if (exportFile != nullptr) {
+            for (i = 0; i < testText.length();) {
+                fprintf(exportFile, expectedBreaks[i] ? "÷ " : "× ");
+                char32_t const c = testText.char32At(i);
+                fprintf(exportFile, "%04X ", static_cast<uint32_t>(c));
+                i += U16_LENGTH(c);
+            }
+            fprintf(exportFile, expectedBreaks[testText.length()] ? "÷  # 🐒\n" : "×  # 🐒\n");
         }
 
         // Compare the expected and actual results.
@@ -4852,7 +4910,7 @@ void RBBITest::TestReverse(std::unique_ptr<RuleBasedBreakIterator>bi) {
     for (int i=0; i<testString.length(); ++i) {
         bool isboundary = bi->isBoundary(i);
         int  ruleStatus = bi->getRuleStatus();
-        expectedResults.push_back(std::make_pair(isboundary, ruleStatus));
+        expectedResults.emplace_back(isboundary, ruleStatus);
     }
 
     for (int i=testString.length()-1; i>=0; --i) {
@@ -5857,4 +5915,76 @@ void RBBITest::TestExternalBreakEngineWithFakeTaiLe() {
                expected2 == actual2);
 }
 
+// Test a single unpaired unpaired char (either surrogate low or high) in
+// an Unicode set will not cause infinity loop.
+void RBBITest::TestBug22585() {
+    UnicodeString rule = u"$a=[";
+    rule.append(0xdecb) // an unpaired surrogate high
+        .append("];");
+    UParseError pe {};
+    UErrorCode ec {U_ZERO_ERROR};
+    RuleBasedBreakIterator bi(rule, pe, ec);
+
+    rule = u"$a=[";
+    rule.append(0xd94e) // an unpaired surrogate low
+        .append("];");
+    ec = U_ZERO_ERROR;
+    RuleBasedBreakIterator bi2(rule, pe, ec);
+}
+
+// Test a long string with a ; in the end will not cause stack overflow.
+void RBBITest::TestBug22602() {
+    UnicodeString rule(25000, (UChar32)'A', 25000-1);
+    rule.append(u";");
+    UParseError pe {};
+    UErrorCode ec {U_ZERO_ERROR};
+    RuleBasedBreakIterator bi(rule, pe, ec);
+}
+
+void RBBITest::TestBug22636() {
+    UParseError pe {};
+    UErrorCode ec {U_ZERO_ERROR};
+    RuleBasedBreakIterator bi(u"A{77777777777777};", pe, ec);
+    assertEquals(WHERE, ec, U_BRK_RULE_SYNTAX);
+    ec = U_ZERO_ERROR;
+    RuleBasedBreakIterator bi2(u"A{2147483648};", pe, ec);
+    assertEquals(WHERE, ec, U_BRK_RULE_SYNTAX);
+    ec = U_ZERO_ERROR;
+    RuleBasedBreakIterator bi3(u"A{2147483647};", pe, ec);
+    assertEquals(WHERE, ec, U_ZERO_ERROR);
+}
+
+void RBBITest::TestBug22584() {
+    // Creating a break iterator from a rule consisting of a very long
+    // literal input string caused a stack overflow when deleting the
+    // parse tree for the input during the rule building process.
+
+    // Failure of this test showed as a crash during the break iterator construction.
+
+    UnicodeString ruleStr(100000, (UChar32)0, 100000);
+    UParseError pe {};
+    UErrorCode ec {U_ZERO_ERROR};
+
+    RuleBasedBreakIterator bi(ruleStr, pe, ec);
+    ec = U_ZERO_ERROR;
+    ruleStr = u"a/b;c";
+    RuleBasedBreakIterator bi2(ruleStr, pe, ec);
+}
+
+void RBBITest::TestBug22579() {
+    // Test not causing null deref in cloneTree
+    UnicodeString ruleStr = u"[{ab}];";
+    UParseError pe {};
+    UErrorCode ec {U_ZERO_ERROR};
+
+    RuleBasedBreakIterator bi(ruleStr, pe, ec);
+}
+void RBBITest::TestBug22581() {
+    // Test duplicate variable setting will not leak the rule compilation
+    UnicodeString ruleStr = u"$foo=[abc]; $foo=[xyz]; $foo;";
+    UParseError pe {};
+    UErrorCode ec {U_ZERO_ERROR};
+
+    RuleBasedBreakIterator bi(ruleStr, pe, ec);
+}
 #endif // #if !UCONFIG_NO_BREAK_ITERATION
