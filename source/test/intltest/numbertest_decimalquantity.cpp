@@ -92,7 +92,7 @@ void DecimalQuantityTest::testDecimalQuantityBehaviorStandalone() {
 
     fq.setToLong(90909090909000L);
     assertToStringAndHealth(fq, u"<DecimalQuantity 0:0 long 90909090909E3>");
-    fq.setMinInteger(2);
+    fq.increaseMinIntegerTo(2);
     fq.applyMaxInteger(5);
     assertToStringAndHealth(fq, u"<DecimalQuantity 2:0 long 9E3>");
     fq.setMinFraction(3);
@@ -353,7 +353,7 @@ void DecimalQuantityTest::testHardDoubleConversion() {
             { 4096.000000000006, u"4096.000000000006" },
             { 4096.000000000007, u"4096.000000000007" } };
 
-    for (auto& cas : cases) {
+    for (const auto& cas : cases) {
         DecimalQuantity q;
         q.setToDouble(cas.input);
         q.roundToInfinity();
@@ -410,7 +410,7 @@ void DecimalQuantityTest::testToDouble() {
             { "514.23", 514.23 },
             { "-3.142E-271", -3.142e-271 } };
 
-    for (auto& cas : cases) {
+    for (const auto& cas : cases) {
         status.setScope(cas.input);
         DecimalQuantity q;
         q.setToDecNumber({cas.input, -1}, status);
@@ -424,7 +424,7 @@ void DecimalQuantityTest::testMaxDigits() {
     DecimalQuantity dq;
     dq.setToDouble(876.543);
     dq.roundToInfinity();
-    dq.setMinInteger(0);
+    dq.increaseMinIntegerTo(0);
     dq.applyMaxInteger(2);
     dq.setMinFraction(0);
     dq.roundToMagnitude(-2, UNUM_ROUND_FLOOR, status);

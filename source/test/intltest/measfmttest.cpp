@@ -43,7 +43,8 @@ public:
     MeasureFormatTest() {
     }
 
-    void runIndexedTest(int32_t index, UBool exec, const char *&name, char *par=0) override;
+    void runIndexedTest(int32_t index, UBool exec, const char*& name, char* par = nullptr) override;
+
 private:
     void TestBasic();
     void TestCompatible53();
@@ -5743,6 +5744,8 @@ void MeasureFormatTest::TestPrefixes() {
         int32_t expectedBase;
         int32_t expectedPower;
     } cases[] = {
+        {UMEASURE_PREFIX_QUECTO, 10, -30},
+        {UMEASURE_PREFIX_RONTO, 10, -27},
         {UMEASURE_PREFIX_YOCTO, 10, -24},
         {UMEASURE_PREFIX_ZEPTO, 10, -21},
         {UMEASURE_PREFIX_ATTO, 10, -18},
@@ -5764,6 +5767,8 @@ void MeasureFormatTest::TestPrefixes() {
         {UMEASURE_PREFIX_EXA, 10, 18},
         {UMEASURE_PREFIX_ZETTA, 10, 21},
         {UMEASURE_PREFIX_YOTTA, 10, 24},
+        {UMEASURE_PREFIX_RONNA, 10, 27},
+        {UMEASURE_PREFIX_QUETTA, 10, 30},
         {UMEASURE_PREFIX_KIBI, 1024, 1},
         {UMEASURE_PREFIX_MEBI, 1024, 2},
         {UMEASURE_PREFIX_GIBI, 1024, 3},
@@ -5798,8 +5803,7 @@ void MeasureFormatTest::TestParseBuiltIns() {
 
         // Prove that all built-in units are parseable, except "generic" temperature:
         MeasureUnit parsed = MeasureUnit::forIdentifier(unit.getIdentifier(), status);
-        if (unit == MeasureUnit::getGenericTemperature() ||
-                (unit == MeasureUnit::getBeaufort() && logKnownIssue("CLDR-16327", "beaufort currently not convertible"))) {
+        if (unit == MeasureUnit::getGenericTemperature()) {
             status.expectErrorAndReset(U_ILLEGAL_ARGUMENT_ERROR);
         } else {
             status.assertSuccess();
@@ -5832,7 +5836,7 @@ void MeasureFormatTest::TestParseToBuiltIn() {
         {"square-yard-yard", MeasureUnit::getCubicYard()},
     };
 
-    for (auto &cas : cases) {
+    for (const auto& cas : cases) {
         MeasureUnit fromIdent = MeasureUnit::forIdentifier(cas.identifier, status);
         status.assertSuccess();
         assertEquals("forIdentifier returns a normal built-in unit when it exists",

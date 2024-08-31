@@ -9,12 +9,18 @@
 
 #include "unaccent.h"
 
+using icu::Replaceable;
+using icu::Transliterator;
+using icu::UnicodeString;
+
+UOBJECT_DEFINE_RTTI_IMPLEMENTATION(UnaccentTransliterator)
+
 /**
  * Constructor
  */
 UnaccentTransliterator::UnaccentTransliterator() :
-    normalizer("", Normalizer::DECOMP),
-    Transliterator("Unaccent", 0) {
+    normalizer("", UNORM_NFD),
+    Transliterator("Unaccent", nullptr) {
 }
 
 /**

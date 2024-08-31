@@ -21,8 +21,17 @@
 *   for supplementary code points.
 */
 
+#include "cmemory.h"
+#include "unicode/uniset.h"
+#include "unicode/uobject.h"
+#include "unicode/usetiter.h"
 #include "unicode/utypes.h"
 #include "unicont.h"
+#include "utrie.h"
+
+using icu::UObject;
+using icu::UnicodeSet;
+using icu::UnicodeSetIterator;
 
 #define UTRIE_GET8_LATIN1(trie) ((const uint8_t *)(trie)->data32+UTRIE_DATA_BLOCK_LENGTH)
 
@@ -89,7 +98,7 @@ public:
             latin1=UTRIE_GET8_LATIN1(&trie);
         }
 
-        restSet.remove(0, 0xffff);
+        restSet->remove(0, 0xffff);
     }
 
     ~TrieSet() {

@@ -2053,7 +2053,7 @@ void NumberFormatTest::TestCurrencyNames() {
                                              &isChoiceFormat, &len, &ec)),
                                              possibleDataError);
     assertEquals("USD.getName(NARROW_SYMBOL_NAME, en_CA)",
-                 UnicodeString("US$"),
+                 UnicodeString("$"),
                  UnicodeString(ucurr_getName(USD, "en_CA",
                                              UCURR_NARROW_SYMBOL_NAME,
                                              &isChoiceFormat, &len, &ec)),
@@ -2529,7 +2529,7 @@ void NumberFormatTest::TestIllegalPatterns() {
         // Unquoted special characters in the suffix are illegal
         "-:000.000|###",
         "+:000.000'|###'",
-        0
+        nullptr
     };
     for (int32_t i=0; DATA[i]; ++i) {
         const char* pat=DATA[i];
@@ -2560,7 +2560,7 @@ static const char* KEYWORDS[] = {
     /*6*/ "perr:", // <pattern or '-'> <invalid string>
     /*7*/ "pat:", // <pattern or '-'> <exp. toPattern or '-' or 'err'>
     /*8*/ "fpc:", // <pattern or '-'> <curr.amt> <exp. string> <exp. curr.amt>
-    0
+    nullptr
 };
 
 /**
@@ -2570,7 +2570,7 @@ static const char* KEYWORDS[] = {
  * the list.
  */
 static int32_t keywordIndex(const UnicodeString& tok) {
-    for (int32_t i=0; KEYWORDS[i]!=0; ++i) {
+    for (int32_t i = 0; KEYWORDS[i] != nullptr; ++i) {
         if (tok==KEYWORDS[i]) {
             return i;
         }
@@ -2606,8 +2606,8 @@ void NumberFormatTest::TestCases() {
     TokenIterator tokens(&reader);
 
     Locale loc("en", "US", "");
-    DecimalFormat *ref = 0, *fmt = 0;
-    MeasureFormat *mfmt = 0;
+    DecimalFormat *ref = nullptr, *fmt = nullptr;
+    MeasureFormat* mfmt = nullptr;
     UnicodeString pat, tok, mloc, str, out, where, currAmt;
     Formattable n;
 
@@ -2761,7 +2761,7 @@ void NumberFormatTest::TestCases() {
                 testpat = pat;
             }
             if (exppat == "-") exppat = testpat;
-            DecimalFormat* f = 0;
+            DecimalFormat* f = nullptr;
             UErrorCode ec2 = U_ZERO_ERROR;
             if (existingPat) {
                 f = fmt;
@@ -9909,7 +9909,7 @@ void NumberFormatTest::Test21134_ToNumberFormatter() {
     {
         // Case 1: new formatter object
         DecimalFormat inner(u"a0b", {"en", status}, status);
-        if (auto ptr = inner.toNumberFormatter(status)) {
+        if (const auto* ptr = inner.toNumberFormatter(status)) {
             // Copy assignment
             outer1 = *ptr;
         } else {
@@ -9924,7 +9924,7 @@ void NumberFormatTest::Test21134_ToNumberFormatter() {
         inner.format(100, dummy);
         inner.format(100, dummy);
         inner.format(100, dummy);
-        if (auto ptr = inner.toNumberFormatter(status)) {
+        if (const auto* ptr = inner.toNumberFormatter(status)) {
             // Copy assignment
             outer2 = *ptr;
         } else {
@@ -9936,7 +9936,7 @@ void NumberFormatTest::Test21134_ToNumberFormatter() {
         // Case 3: currency plural info (different code path)
         LocalPointer<DecimalFormat> inner(dynamic_cast<DecimalFormat*>(
             DecimalFormat::createInstance("en-US", UNUM_CURRENCY_PLURAL, status)));
-        if (auto ptr = inner->toNumberFormatter(status)) {
+        if (const auto* ptr = inner->toNumberFormatter(status)) {
             // Copy constructor
             outer3.adoptInsteadAndCheckErrorCode(new LocalizedNumberFormatter(*ptr), status);
         } else {
@@ -10009,7 +10009,7 @@ void NumberFormatTest::Test13733_StrictAndLenient() {
                   {u"12$", u"0 ¤¤", 0, 12},
                   {u"12$", u"0 ¤¤¤", 0, 12},
                   {u"12$", u"¤¤¤¤0", 0, 12} };
-    for (auto& cas : cases) {
+    for (const auto& cas : cases) {
         UnicodeString inputString(cas.inputString);
         UnicodeString patternString(cas.patternString);
         int64_t parsedStrictValue = 0;

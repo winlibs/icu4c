@@ -87,6 +87,9 @@ TimeZoneFormatTest::runIndexedTest( int32_t index, UBool exec, const char* &name
         TESTCASE(7, TestFormatTZDBNamesAllZoneCoverage);
         TESTCASE(8, TestAdoptDefaultThreadSafe);
         TESTCASE(9, TestCentralTime);
+        TESTCASE(10, TestBogusLocale);
+        TESTCASE(11, Test22614GetMetaZoneNamesNotCrash);
+        TESTCASE(12, Test22615NonASCIIID);
     default: name = ""; break;
     }
 }
@@ -334,8 +337,7 @@ TimeZoneFormatTest::TestTimeZoneRoundTrip() {
                             }
                         } else {
                             // Specific or generic: raw offset must be preserved.
-                            if (inRaw != outRaw && !(uprv_strncmp(LOCALES[locidx].getName(),"ku",2)==0 && tzid->compare(u"America/Miquelon",16)==0
-                                    && logKnownIssue("CLDR-17024", "TestTimeZoneRoundTrip exhaustive fail with tz=America/Miquelon, locale=ku"))) {
+                            if (inRaw != outRaw) {
                                 errln((UnicodeString)"Raw offset round trip failed; tz=" + *tzid
                                     + ", locale=" + LOCALES[locidx].getName() + ", pattern=" + PATTERNS[patidx]
                                     + ", time=" + DATES[datidx] + ", str=" + tzstr
@@ -535,13 +537,13 @@ void TimeZoneFormatTest::RunTimeRoundTripTests(int32_t threadNumber) {
     UBool REALLY_VERBOSE = false;
 
     // These patterns are ambiguous at DST->STD local time overlap
-    const char* AMBIGUOUS_DST_DECESSION[] = { "v", "vvvv", "V", "VV", "VVV", "VVVV", 0 };
+    const char* AMBIGUOUS_DST_DECESSION[] = { "v", "vvvv", "V", "VV", "VVV", "VVVV", nullptr };
 
     // These patterns are ambiguous at STD->STD/DST->DST local time overlap
-    const char* AMBIGUOUS_NEGATIVE_SHIFT[] = { "z", "zzzz", "v", "vvvv", "V", "VV", "VVV", "VVVV", 0 };
+    const char* AMBIGUOUS_NEGATIVE_SHIFT[] = { "z", "zzzz", "v", "vvvv", "V", "VV", "VVV", "VVVV", nullptr };
 
     // These patterns only support integer minutes offset
-    const char* MINUTES_OFFSET[] = { "X", "XX", "XXX", "x", "xx", "xxx", 0 };
+    const char* MINUTES_OFFSET[] = { "X", "XX", "XXX", "x", "xx", "xxx", nullptr };
 
     // Workaround for #6338
     //UnicodeString BASEPATTERN("yyyy-MM-dd'T'HH:mm:ss.SSS");
@@ -613,6 +615,14 @@ void TimeZoneFormatTest::RunTimeRoundTripTests(int32_t threadNumber) {
                     && logKnownIssue("11052", "Ambiguous zone name - Samoa Time")) {
                 continue;
             }
+
+            if ((*tzid == "America/Miquelon" || *tzid == "America/Hermosillo" || *tzid == "America/Mazatlan")
+                    && uprv_strncmp(gLocaleData->locales[locidx].getName(),"ku",2) == 0
+                    && uprv_strcmp(PATTERNS[patidx], "v") == 0
+                    && logKnownIssue("CLDR-17024", "TestTimeRoundTrip fail with tz=America/Miquelon, pattern=v, locale=ku")) {
+                continue;
+            }
+
 
             BasicTimeZone *tz = dynamic_cast<BasicTimeZone*>(TimeZone::createTimeZone(*tzid));
             sdf->setTimeZone(*tz);
@@ -977,9 +987,9 @@ TimeZoneFormatTest::TestISOFormat() {
         },
         // 108000000
         {
-            0, 0, 0, 0, 0,
-            0, 0, 0, 0, 0,
-            0
+            nullptr, nullptr, nullptr, nullptr, nullptr,
+            nullptr, nullptr, nullptr, nullptr, nullptr,
+            nullptr
         }
     };
 
@@ -987,7 +997,7 @@ TimeZoneFormatTest::TestISOFormat() {
         "X", "XX", "XXX", "XXXX", "XXXXX",
         "x", "xx", "xxx", "xxxx", "xxxxx",
         "Z", // equivalent to "xxxx"
-        0
+        nullptr
     };
 
     const int32_t MIN_OFFSET_UNIT[] = {
@@ -1008,7 +1018,7 @@ TimeZoneFormatTest::TestISOFormat() {
     for (uint32_t i = 0; i < UPRV_LENGTHOF(OFFSET); i++) {
         SimpleTimeZone* tz = new SimpleTimeZone(OFFSET[i], UnicodeString("Zone Offset:") + OFFSET[i] + "ms");
         sdf->adoptTimeZone(tz);
-        for (int32_t j = 0; PATTERN[j] != 0; j++) {
+        for (int32_t j = 0; PATTERN[j] != nullptr; j++) {
             sdf->applyPattern(UnicodeString(PATTERN[j]));
             UnicodeString result;
             sdf->format(d, result);
@@ -1037,8 +1047,8 @@ TimeZoneFormatTest::TestISOFormat() {
         return;
     }
     for (int32_t i = 0; ISO_STR[i][0] != nullptr; i++) {
-        for (int32_t j = 0; PATTERN[j] != 0; j++) {
-            if (ISO_STR[i][j] == 0) {
+        for (int32_t j = 0; PATTERN[j] != nullptr; j++) {
+            if (ISO_STR[i][j] == nullptr) {
                 continue;
             }
             ParsePosition pos(0);
@@ -1145,7 +1155,7 @@ TimeZoneFormatTest::TestFormat() {
             UTZFMT_TIME_TYPE_UNKNOWN
         },
 
-        {0, 0, 0.0, UTZFMT_STYLE_GENERIC_LOCATION, 0, UTZFMT_TIME_TYPE_UNKNOWN}
+        {nullptr, nullptr, 0.0, UTZFMT_STYLE_GENERIC_LOCATION, nullptr, UTZFMT_TIME_TYPE_UNKNOWN}
     };
 
     for (int32_t i = 0; DATA[i].locale; i++) {
@@ -1235,7 +1245,7 @@ TimeZoneFormatTest::TestFormatTZDBNames() {
             UTZFMT_TIME_TYPE_STANDARD
         },
 
-        {0, 0, 0.0, UTZFMT_STYLE_GENERIC_LOCATION, 0, UTZFMT_TIME_TYPE_UNKNOWN}
+        {nullptr, nullptr, 0.0, UTZFMT_STYLE_GENERIC_LOCATION, nullptr, UTZFMT_TIME_TYPE_UNKNOWN}
     };
 
     for (int32_t i = 0; DATA[i].locale; i++) {
@@ -1279,14 +1289,14 @@ TimeZoneFormatTest::TestFormatCustomZone() {
         { "abc", 3600000, "GMT+01:00" },                    // unknown ID
         { "$abc", -3600000, "GMT-01:00" },                 // unknown, with ASCII variant char '$'
         { "\\u00c1\\u00df\\u00c7", 5400000, "GMT+01:30"},    // unknown, with non-ASCII chars
-        { 0, 0, 0 }
+        { nullptr, 0, nullptr }
     };
 
     UDate now = Calendar::getNow();
 
     for (int32_t i = 0; ; i++) {
         const char *id = TESTDATA[i].id;
-        if (id == 0) {
+        if (id == nullptr) {
             break;
         }
         UnicodeString tzid = UnicodeString(id, -1, US_INV).unescape();
@@ -1306,6 +1316,63 @@ TimeZoneFormatTest::TestFormatCustomZone() {
     }
 }
 
+void
+TimeZoneFormatTest::Test22615NonASCIIID() {
+    UErrorCode status = U_ZERO_ERROR;
+    LocalPointer<TimeZoneNames> tzdb(TimeZoneNames::createTZDBInstance(Locale("en"), status));
+    // A test to ensure under the debugging build non ASCII id will not cause
+    // internal assertion error.
+    UnicodeString id(9, u'\u00C0', 8);
+    UnicodeString output;
+    tzdb->getMetaZoneDisplayName(id, UTZNM_SHORT_STANDARD, output);
+    assertTrue("getMetaZoneID of non ASCII id should return bogus string",
+               output.isBogus());
+
+    status = U_ZERO_ERROR;
+    std::unique_ptr<icu::StringEnumeration> enumeration(
+        tzdb->getAvailableMetaZoneIDs(id, status));
+    assertSuccess("getAvailableMetaZoneIDs should success", status);
+    assertEquals("getAvailableMetaZoneIDs with non ASCII id return 0 ids",
+                 0, enumeration->count(status));
+    assertSuccess("count should success", status);
+
+    output.remove();
+    tzdb->getMetaZoneID(id, 0, output);
+    assertTrue("getMetaZoneID of non ASCII id should return bogus string",
+               output.isBogus());
+
+    output.remove();
+    tzdb->getMetaZoneDisplayName(id, UTZNM_EXEMPLAR_LOCATION, output);
+    assertTrue("getMetaZoneDisplayName of non ASCII id should return bogus string",
+               output.isBogus());
+
+    output.remove();
+    tzdb->getTimeZoneDisplayName(id, UTZNM_SHORT_DAYLIGHT, output);
+    assertTrue("getTimeZoneDisplayName of non ASCII id should return bogus string",
+               output.isBogus());
+
+    output.remove();
+    tzdb->getExemplarLocationName(id, output);
+    assertTrue("getExemplarLocationName of non ASCII id should return bogus string",
+               output.isBogus());
+
+    output.remove();
+    tzdb->getDisplayName(id, UTZNM_LONG_GENERIC, 0, output);
+    assertTrue("getDisplayName of non ASCII id should return bogus string",
+               output.isBogus());
+}
+
+void
+TimeZoneFormatTest::Test22614GetMetaZoneNamesNotCrash() {
+    UErrorCode status = U_ZERO_ERROR;
+    LocalPointer<TimeZoneNames> tzdbNames(TimeZoneNames::createTZDBInstance(Locale("en"), status));
+    UnicodeString name;
+    for (int32_t i = 124; i < 150; i++) {
+        name.remove();
+        UnicodeString mzId(i+1, u'A', i);
+        tzdbNames->getMetaZoneDisplayName(mzId, UTZNM_SHORT_STANDARD, name);
+    }
+}
 void
 TimeZoneFormatTest::TestFormatTZDBNamesAllZoneCoverage() {
     UErrorCode status = U_ZERO_ERROR;
@@ -1400,6 +1467,16 @@ TimeZoneFormatTest::TestCentralTime() {
         if (dUS != dBZ) {
             errln((UnicodeString)"Parse results should be same for input: " + testInputs[i]);
         }
+    }
+}
+void
+TimeZoneFormatTest::TestBogusLocale() {
+    Locale bogus("not a lang");
+    UErrorCode status = U_ZERO_ERROR;
+    std::unique_ptr<icu::TimeZoneFormat> tzfmt(
+        icu::TimeZoneFormat::createInstance(bogus, status));
+    if (U_FAILURE(status)) {
+        errln(u"Failed to createInstance with bogus locale");
     }
 }
 #endif /* #if !UCONFIG_NO_FORMATTING */

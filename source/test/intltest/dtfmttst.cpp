@@ -135,6 +135,8 @@ void DateFormatTest::runIndexedTest( int32_t index, UBool exec, const char* &nam
     TESTCASE_AUTO(TestNumericFieldStrictParse);
     TESTCASE_AUTO(TestHourCycle);
     TESTCASE_AUTO(TestHCInLocale);
+    TESTCASE_AUTO(TestBogusLocale);
+    TESTCASE_AUTO(TestLongLocale);
 
     TESTCASE_AUTO_END;
 }
@@ -272,9 +274,7 @@ void DateFormatTest::TestWallyWedel()
     StringEnumeration* ids = TimeZone::createEnumeration(status);
     if (U_FAILURE(status)) {
         dataerrln("Unable to create TimeZone enumeration.");
-        if (sdf != nullptr) {
-            delete sdf;
-        }
+        delete sdf;
         return;
     }
     ids_length = ids->count(status);
@@ -324,7 +324,7 @@ void DateFormatTest::TestWallyWedel()
         FieldPosition pos(FieldPosition::DONT_CARE);
         sdf->format(today,fmtOffset, pos);
         // UnicodeString fmtOffset = tzS.toString();
-        UnicodeString *fmtDstOffset = 0;
+        UnicodeString* fmtDstOffset = nullptr;
         if (fmtOffset.startsWith("GMT") && fmtOffset.length() != 3)
         {
             //fmtDstOffset = fmtOffset->substring(3);
@@ -334,12 +334,12 @@ void DateFormatTest::TestWallyWedel()
         /*
          * Show our result.
          */
-        UBool ok = fmtDstOffset == 0 || *fmtDstOffset == dstOffset;
+        UBool ok = fmtDstOffset == nullptr || *fmtDstOffset == dstOffset;
         if (ok)
         {
             logln(UnicodeString() + i + " " + *id + " " + dstOffset +
                   " " + fmtOffset +
-                  (fmtDstOffset != 0 ? " ok" : " ?"));
+                  (fmtDstOffset != nullptr ? " ok" : " ?"));
         }
         else
         {
@@ -921,7 +921,7 @@ DateFormatTest::TestDayOfYearPattern195()
         dataerrln("Error calling DateFormat::createDateInstance()");
         return;
     }
-    tryPattern(*sdf, today, 0, expected);
+    tryPattern(*sdf, today, nullptr, expected);
     tryPattern(*sdf, today, "G yyyy DDD", expected);
     delete sdf;
     if (U_FAILURE(status)) errln((UnicodeString)"FAIL: UErrorCode received during test: " + (int32_t)status);
@@ -933,7 +933,7 @@ void
 DateFormatTest::tryPattern(SimpleDateFormat& sdf, UDate d, const char* pattern, UDate expected)
 {
     UErrorCode status = U_ZERO_ERROR;
-    if (pattern != 0) sdf.applyPattern(pattern);
+    if (pattern != nullptr) sdf.applyPattern(pattern);
     UnicodeString thePat;
     logln((UnicodeString)"pattern: " + sdf.toPattern(thePat));
     UnicodeString formatResult; (*dynamic_cast<DateFormat*>(&sdf)).format(d, formatResult);
@@ -1077,17 +1077,17 @@ static const char* const inputStrings[] = {
 #else
 // lenient inputStrings
 static const char* const inputStrings[] = {
-    "bogus string", 0, 0, 0, 0, 0, 0, 0, 0, 0,
-    "April 1, 1997", "April 1, 1997", "April 1 1997", "4/1/97", 0, 0, 0, "April 1", 0, 0,
-    "Jan 1, 1970", "January 1, 1970", "January 1 1970", "1/1/70", 0, 0, 0, "January 1", 0, 0,
-    "Jan 1 2037", "January 1, 2037", "January 1 2037", "1/1/37", 0, 0, 0, "January 1", 0, 0,
-    "1/1/70", "January 1, 0070", "January 1 0070", "1/1/70", "1 January, 0070", "1 January 0070", "1 January", "January 1", "0001", 0,
-    "5 May 1997", 0, 0, 0, "5 May, 1997", "5 May 1997", "5 May", 0, "0005", 0,
-    "16 May", 0, 0, 0, 0, 0, "16 May", 0, "0016", 0,
-    "April 30", 0, 0, 0, 0, 0, 0, "April 30", 0, 0,
-    "1998", 0, 0, 0, 0, 0, 0, 0, "1998", 0,
-    "1", 0, 0, 0, 0, 0, 0, 0, "0001", 0,
-    "3:00 pm Jan 1, 1997", 0, 0, 0, 0, 0, 0, 0, "0003", "3:00 PM January 1, 1997",
+    "bogus string", nullptr, nullptr, nullptr, nullptr, nullptr, nullptr, nullptr, nullptr, nullptr,
+    "April 1, 1997", "April 1, 1997", "April 1 1997", "4/1/97", nullptr, nullptr, nullptr, "April 1", nullptr, nullptr,
+    "Jan 1, 1970", "January 1, 1970", "January 1 1970", "1/1/70", nullptr, nullptr, nullptr, "January 1", nullptr, nullptr,
+    "Jan 1 2037", "January 1, 2037", "January 1 2037", "1/1/37", nullptr, nullptr, nullptr, "January 1", nullptr, nullptr,
+    "1/1/70", "January 1, 0070", "January 1 0070", "1/1/70", "1 January, 0070", "1 January 0070", "1 January", "January 1", "0001", nullptr,
+    "5 May 1997", nullptr, nullptr, nullptr, "5 May, 1997", "5 May 1997", "5 May", nullptr, "0005", nullptr,
+    "16 May", nullptr, nullptr, nullptr, nullptr, nullptr, "16 May", nullptr, "0016", nullptr,
+    "April 30", nullptr, nullptr, nullptr, nullptr, nullptr, nullptr, "April 30", nullptr, nullptr,
+    "1998", nullptr, nullptr, nullptr, nullptr, nullptr, nullptr, nullptr, "1998", nullptr,
+    "1", nullptr, nullptr, nullptr, nullptr, nullptr, nullptr, nullptr, "0001", nullptr,
+    "3:00 pm Jan 1, 1997", nullptr, nullptr, nullptr, nullptr, nullptr, nullptr, nullptr, "0003", "3:00 PM January 1, 1997",
 };
 #endif
 
@@ -1152,13 +1152,13 @@ DateFormatTest::TestBadInput135a()
           UnicodeString result;
           (dynamic_cast<DateFormat*>(dateParse))->format(date, result);
           logln((UnicodeString)"Parsed \"" + s + "\" using \"" + dateParse->toPattern(thePat) + "\" to: " + result);
-          if (expected == 0)
+          if (expected == nullptr)
             errln((UnicodeString)"FAIL: Expected parse failure, got " + result);
           else if (!(result == expected))
             errln(UnicodeString("FAIL: Parse \"") + s + UnicodeString("\", expected ") + expected + UnicodeString(", got ") + result);
         }
       }
-      else if (expected != 0) {
+      else if (expected != nullptr) {
         errln(UnicodeString("FAIL: Expected ") + expected + " from \"" +
                      s + "\" with \"" + dateParse->toPattern(thePat) + "\"");
       }
@@ -1404,8 +1404,8 @@ DateFormatTest::TestFormattingLocaleTimeSeparator()
  * Test DateFormat(Calendar) API
  */
 void DateFormatTest::TestDateFormatCalendar() {
-    DateFormat *date=0, *time=0, *full=0;
-    Calendar *cal=0;
+    DateFormat *date = nullptr, *time = nullptr, *full = nullptr;
+    Calendar* cal = nullptr;
     UnicodeString str;
     ParsePosition pos;
     UDate when;
@@ -3819,8 +3819,6 @@ void DateFormatTest::Test6726()
     delete fmtl;
     delete fmtm;
     delete fmts;
-
-    return;
 }
 
 /**
@@ -3994,9 +3992,7 @@ void DateFormatTest::TestISOEra() {
     SimpleDateFormat *fmt1 = new SimpleDateFormat(UnicodeString("GGG yyyy-MM-dd'T'HH:mm:ss'Z"), status);
     failure(status, "new SimpleDateFormat", true);
     if (status == U_MISSING_RESOURCE_ERROR) {
-        if (fmt1 != nullptr) {
-            delete fmt1;
-        }
+        delete fmt1;
         return;
     }
     for(int i=0; i < numData; i+=2) {
@@ -4091,7 +4087,7 @@ void DateFormatTest::TestParsePosition() {
         {"'time zone:' VVVV 'date:' yyyy-MM-dd", "xxxx", "time zone: Los Angeles Time date: 2010-02-25", "xxxx"},
         {"yG", "", "2012AD", ""},
         {"yG", "", "2012", "x"},
-        {0, 0, 0, 0},
+        {nullptr, nullptr, nullptr, nullptr},
     };
 
     for (int32_t i = 0; TestData[i][0]; i++) {
@@ -4312,14 +4308,10 @@ void DateFormatTest::TestContext()
                            ", expected " + itemPtr->expectedFormat + ", got " + result);
                }
            }
-           if (sdmft) {
-               delete sdmft;
-           }
+           delete sdmft;
         }
     }
-    if (cal) {
-        delete cal;
-    }
+    delete cal;
 }
 
 // test item for a particular locale + calendar and date format
@@ -5874,6 +5866,25 @@ void DateFormatTest::TestHourCycle() {
         errorMessage.append(TEST_CASES[i].languageTag, err);
         assertEquals(errorMessage.data(), TEST_CASES[i].expectedResult, actualResult);
     }
+}
+
+void DateFormatTest::TestBogusLocale() {
+    IcuTestErrorCode status(*this, "TestBogusLocale");
+    LocalPointer<DateFormat> df;
+
+    df.adoptInstead(DateFormat::createDateTimeInstance(DateFormat::kNone, DateFormat::kMedium,
+                    Locale("notalanguage")));
+}
+
+void DateFormatTest::TestLongLocale() {
+    IcuTestErrorCode status(*this, "TestLongLocale");
+    LocalPointer<DateFormat> df;
+
+    // This should not cause a crash
+    std::string s(1023, ' ');
+    s[1] = '-';
+    df.adoptInstead(DateFormat::createDateTimeInstance(DateFormat::kDateTime, DateFormat::kMedium,
+                    Locale(s.c_str())));
 }
 
 void DateFormatTest::TestHCInLocale() {
