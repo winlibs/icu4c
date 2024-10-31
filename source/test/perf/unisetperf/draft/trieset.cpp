@@ -79,7 +79,7 @@ public:
             return;
         }
 
-        trieData=(uint32_t *)uprv_malloc(length);
+        trieData = static_cast<uint32_t*>(uprv_malloc(length));
         if(trieData==nullptr) {
             errorCode=U_MEMORY_ALLOCATION_ERROR;
             return;
@@ -106,11 +106,11 @@ public:
         delete restSet;
     }
 
-    UBool contains(UChar32 c) const {
-        if((uint32_t)c<=0xff) {
-            return (UBool)latin1[c];
-        } else if((uint32_t)c<0xffff) {
-            return (UBool)UTRIE_GET8_FROM_LEAD(&trie, c);
+    UBool contains(UChar32 c) const override {
+        if (static_cast<uint32_t>(c) <= 0xff) {
+            return latin1[c];
+        } else if (static_cast<uint32_t>(c) < 0xffff) {
+            return UTRIE_GET8_FROM_LEAD(&trie, c);
         } else {
             return restSet->contains(c);
         }

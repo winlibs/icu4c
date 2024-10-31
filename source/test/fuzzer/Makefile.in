@@ -34,6 +34,7 @@ DEFS += -D'U_TOPSRCDIR="$(top_srcdir)/"' -D'U_TOPBUILDDIR="$(BUILDDIR)"'
 LIBS = $(LIBCTESTFW) $(LIBICUTOOLUTIL) $(LIBICUIO) $(LIBICUI18N) $(LIBICUUC) $(DEFAULT_LIBS) $(LIB_M)
 
 FUZZER_TARGETS = \
+		 ubidi_fuzzer \
 		 break_iterator_fuzzer \
 		 calendar_fuzzer collator_compare_fuzzer \
 		 collator_rulebased_fuzzer \
@@ -42,6 +43,7 @@ FUZZER_TARGETS = \
 		 dtfmtsym_fuzzer \
 		 list_format_fuzzer locale_fuzzer \
 		 locale_morph_fuzzer \
+                 message_formatter_fuzzer \
 		 normalizer2_fuzzer \
 		 number_format_fuzzer \
 		 number_formatter_fuzzer \
@@ -60,6 +62,7 @@ FUZZER_TARGETS = \
 		 unicode_string_codepage_create_fuzzer \
 		 uprop_fuzzer \
 		 uregex_open_fuzzer \
+		 uregex_match_fuzzer \
 
 
 OBJECTS = $(FUZZER_TARGETS:%=%.o)

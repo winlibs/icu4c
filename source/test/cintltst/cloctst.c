@@ -3913,17 +3913,17 @@ const char* const basic_maximize_data[][2] = {
     "zh_Hani",
     "zh_Hani_CN" // If change, please also update common/unicode/uloc.h
   }, {
-    // ICU-22545
+    // ICU-22545 & ICU-22742
     "en_XA",
-    "en_XA"
+    "en_Latn_XA"
   }, {
-    // ICU-22545
-    "en_XB",
-    "en_XB"
+    // ICU-22545 & ICU-22742
+    "ar_XB",
+    "ar_Arab_XB"
   }, {
-    // ICU-22545
-    "en_XC",
-    "en_XC"
+    // ICU-22545 & ICU-22742
+    "ru_XC",
+    "ru_Cyrl_XC"
   }
 };
 
@@ -6201,6 +6201,11 @@ static void TestLikelySubtags(void)
         UErrorCode status = U_ZERO_ERROR;
         const char* const minimal = full_data[i][0];
         const char* const maximal = full_data[i][1];
+
+        if (uprv_strcmp(minimal, "und_Hant_CN") == 0 &&
+                log_knownIssue("CLDR-17908", "und_Hant_CN changed expected result for Likely Subtags")) {
+            continue;
+        }
 
         /* const int32_t length = */
             uloc_addLikelySubtags(
