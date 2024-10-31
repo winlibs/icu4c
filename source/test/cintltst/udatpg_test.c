@@ -30,6 +30,7 @@
 #if !UCONFIG_NO_FORMATTING
 
 #include <stdbool.h>
+#include <stdio.h> // for sprintf()
 
 #include "unicode/udat.h"
 #include "unicode/udatpg.h"
@@ -51,7 +52,9 @@ static void TestGetDefaultHourCycleOnEmptyInstance(void);
 static void TestEras(void);
 static void TestDateTimePatterns(void);
 static void TestRegionOverride(void);
+static void TestISO8601(void);
 
+    
 void addDateTimePatternGeneratorTest(TestNode** root) {
     TESTCASE(TestOpenClose);
     TESTCASE(TestUsage);
@@ -63,6 +66,7 @@ void addDateTimePatternGeneratorTest(TestNode** root) {
     TESTCASE(TestEras);
     TESTCASE(TestDateTimePatterns);
     TESTCASE(TestRegionOverride);
+    TESTCASE(TestISO8601);
 }
 
 /*
@@ -424,6 +428,16 @@ static void TestOptions(void) {
         { "da", skel_Hmm,  UDATPG_MATCH_HOUR_FIELD_LENGTH, patn_Hpmm    },
         { "da", skel_HHmm, UDATPG_MATCH_HOUR_FIELD_LENGTH, patn_HHpmm   },
         { "da", skel_hhmm, UDATPG_MATCH_HOUR_FIELD_LENGTH, patn_hhpmm_a },
+        
+        // tests for ICU-22669
+        { "zh_TW",           u"jjm",  UDATPG_MATCH_NO_OPTIONS,        u"ah:mm" },
+        { "zh_TW",           u"jjm",  UDATPG_MATCH_ALL_FIELDS_LENGTH, u"ahh:mm" },
+        { "zh_TW",           u"jjms", UDATPG_MATCH_NO_OPTIONS,        u"ah:mm:ss" },
+        { "zh_TW",           u"jjms", UDATPG_MATCH_ALL_FIELDS_LENGTH, u"ahh:mm:ss" },
+        { "zh_TW@hours=h23", u"jjm",  UDATPG_MATCH_NO_OPTIONS,        u"HH:mm" },
+        { "zh_TW@hours=h23", u"jjm",  UDATPG_MATCH_ALL_FIELDS_LENGTH, u"HH:mm" }, // (without the fix, we get "HH:m" here)
+        { "zh_TW@hours=h23", u"jjms", UDATPG_MATCH_NO_OPTIONS,        u"HH:mm:ss" },
+        { "zh_TW@hours=h23", u"jjms", UDATPG_MATCH_ALL_FIELDS_LENGTH, u"HH:mm:ss" },
     };
 
     int count = UPRV_LENGTHOF(testData);
@@ -821,6 +835,48 @@ static void TestRegionOverride(void) {
             if (assertSuccess("Error using dtpg", &err)) {
                 assertIntEquals("Wrong hour cycle", testCases[i].expectedHourCycle, actualHourCycle);
                 assertUEquals("Wrong pattern", testCases[i].expectedPattern, actualPattern);
+            }
+        }
+        udatpg_close(dtpg);
+    }
+}
+
+static void TestISO8601(void) {
+    typedef struct TestCase {
+        const char* locale;
+        const UChar* skeleton;
+        const UChar* expectedPattern;
+    } TestCase;
+
+    const TestCase testCases[] = {
+        { "en_GB@calendar=iso8601;rg=uszzzz", u"EEEEyMMMMdjmm", u"y MMMM d, EEEE 'at' h:mm a" },
+        { "en_GB@calendar=iso8601;rg=uszzzz", u"EEEEyMMMMdHmm", u"y MMMM d, EEEE 'at' HH:mm" },
+        { "en_GB@calendar=iso8601;rg=uszzzz", u"Edjmm",         u"d, EEE, h:mm a" },
+        { "en_GB@calendar=iso8601;rg=uszzzz", u"EdHmm",         u"d, EEE, HH:mm" },
+
+        { "en_US@calendar=iso8601",           u"EEEEyMMMMdjmm", u"y MMMM d, EEEE 'at' h:mm a" },
+        { "en_US@calendar=iso8601",           u"EEEEyMMMMdHmm", u"y MMMM d, EEEE 'at' HH:mm" },
+        { "en_US@calendar=iso8601",           u"Edjmm",         u"d, EEE, h:mm a" },
+        { "en_US@calendar=iso8601",           u"EdHmm",         u"d, EEE, HH:mm" },
+
+        { "en_US",                            u"EEEEyMMMMdjmm", u"EEEE, MMMM d, y 'at' h:mm a" },
+        { "en_US",                            u"EEEEyMMMMdHmm", u"EEEE, MMMM d, y 'at' HH:mm" },
+        { "en_US",                            u"Edjmm",         u"d EEE, h:mm a" },
+        { "en_US",                            u"EdHmm",         u"d EEE, HH:mm" },
+    };
+
+    for (int32_t i = 0; i < UPRV_LENGTHOF(testCases); i++) {
+        UErrorCode err = U_ZERO_ERROR;
+        UDateTimePatternGenerator* dtpg = udatpg_open(testCases[i].locale, &err);
+
+        if (assertSuccess("Error creating dtpg", &err)) {
+            UChar actualPattern[200];
+
+            udatpg_getBestPatternWithOptions(dtpg, testCases[i].skeleton, -1, 0, actualPattern, UPRV_LENGTHOF(actualPattern), &err);
+            if (assertSuccess("Error getting best pattern", &err)) {
+                char errorMessage[200];
+                snprintf(errorMessage, UPRV_LENGTHOF(errorMessage), "Wrong pattern for %s and %s", testCases[i].locale, austrdup(testCases[i].skeleton));
+                assertUEquals(errorMessage, testCases[i].expectedPattern, actualPattern);
             }
         }
         udatpg_close(dtpg);

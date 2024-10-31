@@ -21,6 +21,9 @@
 #include "testutil.h"
 #include "uparse.h"
 #include "ucdtest.h"
+#include "usettest.h"
+
+#include <iostream>
 
 static const char *ignorePropNames[]={
     "FC_NFKC",
@@ -82,7 +85,7 @@ void UnicodeTest::runIndexedTest( int32_t index, UBool exec, const char* &name, 
     TESTCASE_AUTO(TestPropertyNames);
     TESTCASE_AUTO(TestIDSUnaryOperator);
     TESTCASE_AUTO(TestIDCompatMath);
-    TESTCASE_AUTO(TestBinaryPropertyUsingPpucd);
+    TESTCASE_AUTO(TestPropertiesUsingPpucd);
     TESTCASE_AUTO(TestIDStatus);
     TESTCASE_AUTO(TestIDType);
     TESTCASE_AUTO_END;
@@ -468,7 +471,7 @@ void UnicodeTest::TestScriptMetadata() {
     // Georgian is special.
     UnicodeSet cased("[[:Lu:]-[:sc=Common:]-[:sc=Geor:]]", errorCode);
     for(int32_t sci = 0; sci < USCRIPT_CODE_LIMIT; ++sci) {
-        UScriptCode sc = (UScriptCode)sci;
+        UScriptCode sc = static_cast<UScriptCode>(sci);
         // Run the test with -v to see which script has failures:
         // .../intltest$ make && ./intltest utility/UnicodeTest/TestScriptMetadata -v | grep -C 6 FAIL
         logln(uscript_getShortName(sc));
@@ -487,10 +490,10 @@ void UnicodeTest::TestScriptMetadata() {
             UChar32 firstChar = sample.char32At(0);
             UScriptCode charScript = getCharScript(sc);
             assertEquals("script(sample(script))",
-                         (int32_t)charScript, (int32_t)uscript_getScript(firstChar, errorCode));
-            assertEquals("RTL vs. set", (UBool)rtl.contains(firstChar), (UBool)uscript_isRightToLeft(sc));
-            assertEquals("cased vs. set", (UBool)cased.contains(firstChar), (UBool)uscript_isCased(sc));
-            assertEquals("encoded, has characters", (UBool)(sc == charScript), (UBool)(!scriptSet.isEmpty()));
+                         static_cast<int32_t>(charScript), static_cast<int32_t>(uscript_getScript(firstChar, errorCode)));
+            assertEquals("RTL vs. set", rtl.contains(firstChar), uscript_isRightToLeft(sc));
+            assertEquals("cased vs. set", cased.contains(firstChar), uscript_isCased(sc));
+            assertEquals("encoded, has characters", static_cast<UBool>(sc == charScript), static_cast<UBool>(!scriptSet.isEmpty()));
             if(uscript_isRightToLeft(sc)) {
                 rtl.removeAll(scriptSet);
             }
@@ -758,9 +761,9 @@ void UnicodeTest::TestIndicSyllabicCategory() {
 void UnicodeTest::TestVerticalOrientation() {
     IcuTestErrorCode errorCode(*this, "TestVerticalOrientation()");
     UnicodeSet r(u"[:vo=R:]", errorCode);
-    assertTrue("mostly R", 0xc0000 <= r.size() && r.size() <= 0xd0000);
+    assertTrue("mostly R", 0xb0000 <= r.size() && r.size() <= 0xd0000);
     UnicodeSet u(u"[:vo=U:]", errorCode);
-    assertTrue("much U", 0x40000 <= u.size() && u.size() <= 0x50000);
+    assertTrue("much U", 0x40000 <= u.size() && u.size() <= 0x60000);
     UnicodeSet tu(u"[:vo=Tu:]", errorCode);
     assertTrue("some Tu", 147 <= tu.size() && tu.size() <= 300);
     assertEquals("U+0E01: Rotated", U_VO_ROTATED,
@@ -810,41 +813,41 @@ void UnicodeTest::TestBinaryCharacterProperties() {
     IcuTestErrorCode errorCode(*this, "TestBinaryCharacterProperties()");
     // Spot-check getBinaryPropertySet() vs. hasBinaryProperty().
     for (int32_t prop = 0; prop < UCHAR_BINARY_LIMIT; ++prop) {
-        const USet *uset = u_getBinaryPropertySet((UProperty)prop, errorCode);
-        if (errorCode.errIfFailureAndReset("u_getBinaryPropertySet(%d)", (int)prop)) {
+        const USet* uset = u_getBinaryPropertySet(static_cast<UProperty>(prop), errorCode);
+        if (errorCode.errIfFailureAndReset("u_getBinaryPropertySet(%d)", static_cast<int>(prop))) {
             continue;
         }
         const UnicodeSet &set = *UnicodeSet::fromUSet(uset);
         int32_t count = set.getRangeCount();
         if (count == 0) {
             assertFalse(UnicodeString("!hasBinaryProperty(U+0020, ") + prop + u")",
-                u_hasBinaryProperty(0x20, (UProperty)prop));
+                u_hasBinaryProperty(0x20, static_cast<UProperty>(prop)));
             assertFalse(UnicodeString("!hasBinaryProperty(U+0061, ") + prop + u")",
-                u_hasBinaryProperty(0x61, (UProperty)prop));
+                u_hasBinaryProperty(0x61, static_cast<UProperty>(prop)));
             assertFalse(UnicodeString("!hasBinaryProperty(U+4E00, ") + prop + u")",
-                u_hasBinaryProperty(0x4e00, (UProperty)prop));
+                u_hasBinaryProperty(0x4e00, static_cast<UProperty>(prop)));
         } else {
             UChar32 c = set.getRangeStart(0);
             if (c > 0) {
                 assertFalse(
                     UnicodeString("!hasBinaryProperty(") + TestUtility::hex(c - 1) +
                         u", " + prop + u")",
-                    u_hasBinaryProperty(c - 1, (UProperty)prop));
+                    u_hasBinaryProperty(c - 1, static_cast<UProperty>(prop)));
             }
             assertTrue(
                 UnicodeString("hasBinaryProperty(") + TestUtility::hex(c) +
                     u", " + prop + u")",
-                u_hasBinaryProperty(c, (UProperty)prop));
+                u_hasBinaryProperty(c, static_cast<UProperty>(prop)));
             c = set.getRangeEnd(count - 1);
             assertTrue(
                 UnicodeString("hasBinaryProperty(") + TestUtility::hex(c) +
                     u", " + prop + u")",
-                u_hasBinaryProperty(c, (UProperty)prop));
+                u_hasBinaryProperty(c, static_cast<UProperty>(prop)));
             if (c < 0x10ffff) {
                 assertFalse(
                     UnicodeString("!hasBinaryProperty(") + TestUtility::hex(c + 1) +
                         u", " + prop + u")",
-                    u_hasBinaryProperty(c + 1, (UProperty)prop));
+                    u_hasBinaryProperty(c + 1, static_cast<UProperty>(prop)));
             }
         }
     }
@@ -856,8 +859,8 @@ void UnicodeTest::TestIntCharacterProperties() {
     IcuTestErrorCode errorCode(*this, "TestIntCharacterProperties()");
     // Spot-check getIntPropertyMap() vs. getIntPropertyValue().
     for (int32_t prop = UCHAR_INT_START; prop < UCHAR_INT_LIMIT; ++prop) {
-        const UCPMap *map = u_getIntPropertyMap((UProperty)prop, errorCode);
-        if (errorCode.errIfFailureAndReset("u_getIntPropertyMap(%d)", (int)prop)) {
+        const UCPMap* map = u_getIntPropertyMap(static_cast<UProperty>(prop), errorCode);
+        if (errorCode.errIfFailureAndReset("u_getIntPropertyMap(%d)", static_cast<int>(prop))) {
             continue;
         }
         uint32_t value;
@@ -865,16 +868,16 @@ void UnicodeTest::TestIntCharacterProperties() {
         assertTrue("int property first range", end >= 0);
         UChar32 c = end / 2;
         assertEquals(UnicodeString("int property first range value at ") + TestUtility::hex(c),
-            u_getIntPropertyValue(c, (UProperty)prop), value);
+            u_getIntPropertyValue(c, static_cast<UProperty>(prop)), value);
         end = ucpmap_getRange(map, 0x5000, UCPMAP_RANGE_NORMAL, 0, nullptr, nullptr, &value);
         assertTrue("int property later range", end >= 0);
         assertEquals(UnicodeString("int property later range value at ") + TestUtility::hex(end),
-            u_getIntPropertyValue(end, (UProperty)prop), value);
+            u_getIntPropertyValue(end, static_cast<UProperty>(prop)), value);
         // ucpmap_get() API coverage
         // TODO: move to cucdtst.c
         assertEquals(
             "int property upcmap_get(U+0061)",
-            u_getIntPropertyValue(0x61, (UProperty)prop), ucpmap_get(map, 0x61));
+            u_getIntPropertyValue(0x61, static_cast<UProperty>(prop)), ucpmap_get(map, 0x61));
     }
 #endif
 }
@@ -882,13 +885,13 @@ void UnicodeTest::TestIntCharacterProperties() {
 namespace {
 
 const char *getPropName(UProperty property, int32_t nameChoice) UPRV_NO_SANITIZE_UNDEFINED {
-    const char *name = u_getPropertyName(property, (UPropertyNameChoice)nameChoice);
+    const char* name = u_getPropertyName(property, static_cast<UPropertyNameChoice>(nameChoice));
     return name != nullptr ? name : "null";
 }
 
 const char *getValueName(UProperty property, int32_t value, int32_t nameChoice)
         UPRV_NO_SANITIZE_UNDEFINED {
-    const char *name = u_getPropertyValueName(property, value, (UPropertyNameChoice)nameChoice);
+    const char* name = u_getPropertyValueName(property, value, static_cast<UPropertyNameChoice>(nameChoice));
     return name != nullptr ? name : "null";
 }
 
@@ -1041,14 +1044,14 @@ public:
     }
 
     int32_t getPropertyValueEnum(int32_t property, const char *name) const override {
-        return u_getPropertyValueEnum((UProperty) property, name);
+        return u_getPropertyValueEnum(static_cast<UProperty>(property), name);
     }
 };
 
 U_NAMESPACE_END
 
-void UnicodeTest::TestBinaryPropertyUsingPpucd() {
-    IcuTestErrorCode errorCode(*this, "TestBinaryPropertyUsingPpucd()");
+void UnicodeTest::TestPropertiesUsingPpucd() {
+    IcuTestErrorCode errorCode(*this, "TestPropertiesUsingPpucd()");
 
     // Initialize PPUCD parsing object using file in repo and using
     // property names present in built-in data in ICU
@@ -1070,15 +1073,34 @@ void UnicodeTest::TestBinaryPropertyUsingPpucd() {
     BuiltInPropertyNames builtInPropNames;
     ppucd.setPropertyNames(&builtInPropNames);
 
-    // Define which binary properties we want to compare
-    constexpr UProperty propsUnderTest[] = {
-        UCHAR_IDS_UNARY_OPERATOR,
-        UCHAR_ID_COMPAT_MATH_START,
-        UCHAR_ID_COMPAT_MATH_CONTINUE,
-    };
+    // Define which properties we want to compare
+    struct TestProp {
+        const UProperty prop;
+        const int32_t value = 1;  // binary "Yes"
+        UnicodeSet set;
 
-    // Allocate & initialize UnicodeSets per binary property from PPUCD data
-    UnicodeSet ppucdPropSets[std::size(propsUnderTest)];
+        TestProp(UProperty binaryProp) : prop(binaryProp) {}
+        TestProp(UProperty intProp, int32_t v) : prop(intProp), value(v) {}
+        bool isBinary() const { return prop < UCHAR_BINARY_LIMIT; }
+    };
+    TestProp propsUnderTest[] = {
+        { UCHAR_IDS_UNARY_OPERATOR },
+        { UCHAR_ID_COMPAT_MATH_START },
+        { UCHAR_ID_COMPAT_MATH_CONTINUE },
+#if !UCONFIG_NO_NORMALIZATION
+        { UCHAR_NFD_QUICK_CHECK, UNORM_NO },
+        { UCHAR_NFKD_QUICK_CHECK, UNORM_NO },
+        { UCHAR_NFC_QUICK_CHECK, UNORM_NO },
+        { UCHAR_NFKC_QUICK_CHECK, UNORM_NO },
+        { UCHAR_NFC_QUICK_CHECK, UNORM_MAYBE },
+        { UCHAR_NFKC_QUICK_CHECK, UNORM_MAYBE },
+#endif  // !UCONFIG_NO_NORMALIZATION
+        { UCHAR_INDIC_CONJUNCT_BREAK, U_INCB_NONE },
+        { UCHAR_INDIC_CONJUNCT_BREAK, U_INCB_CONSONANT },
+        { UCHAR_INDIC_CONJUNCT_BREAK, U_INCB_EXTEND },
+        { UCHAR_INDIC_CONJUNCT_BREAK, U_INCB_LINKER },
+        { UCHAR_MODIFIER_COMBINING_MARK },
+    };
 
     // Iterate through PPUCD file, accumulating each line's data into each UnicodeSet per property
     PreparsedUCD::LineType lineType;
@@ -1087,15 +1109,17 @@ void UnicodeTest::TestBinaryPropertyUsingPpucd() {
         if(ppucd.lineHasPropertyValues()) {
             const UniProps *lineProps=ppucd.getProps(newValues, errorCode);
 
-            for(uint32_t i = 0; i < std::size(propsUnderTest); i++) {
-                UProperty prop = propsUnderTest[i];
-                if (!newValues.contains(prop)) {
+            for (auto &tp : propsUnderTest) {
+                if (!newValues.contains(tp.prop)) {
                     continue;
                 }
-                if (lineProps->binProps[prop]) {
-                    ppucdPropSets[i].add(lineProps->start, lineProps->end);
+                bool match = tp.isBinary() ?
+                    lineProps->binProps[tp.prop] :
+                    lineProps->getIntProp(tp.prop) == tp.value;
+                if (match) {
+                    tp.set.add(lineProps->start, lineProps->end);
                 } else {
-                    ppucdPropSets[i].remove(lineProps->start, lineProps->end);
+                    tp.set.remove(lineProps->start, lineProps->end);
                 }
             }
         }
@@ -1107,15 +1131,17 @@ void UnicodeTest::TestBinaryPropertyUsingPpucd() {
     }
 
     // Assert that the PPUCD data and the ICU data are equivalent for all properties
-    for(uint32_t i = 0; i < std::size(propsUnderTest); i++) {
+    for (auto &tp : propsUnderTest) {
         UnicodeSet icuPropSet;
-        UProperty prop = propsUnderTest[i];
-        icuPropSet.applyIntPropertyValue(prop, 1, errorCode);
-        std::string msg = 
+        icuPropSet.applyIntPropertyValue(tp.prop, tp.value, errorCode);
+        std::string msg =
             std::string()
-            + "ICU & PPUCD versions of property "
-            + u_getPropertyName(prop, U_LONG_PROPERTY_NAME);
-        assertTrue(msg.c_str(), ppucdPropSets[i] == icuPropSet);
+            + "ICU & PPUCD versions of "
+            + u_getPropertyName(tp.prop, U_LONG_PROPERTY_NAME);
+        if (!tp.isBinary()) {
+            msg = msg + "=" + u_getPropertyValueName(tp.prop, tp.value, U_LONG_PROPERTY_NAME);
+        }
+        UnicodeSetTest::checkEqual(*this, tp.set, icuPropSet, msg.c_str());
     }
 }
 
@@ -1191,7 +1217,7 @@ UnicodeString getIDTypes(UChar32 c) {
     // Check that u_hasIDType() agrees.
     // Includes undefined behavior with t > largest enum constant.
     for (int32_t i = 0; i < 16; ++i) {
-        UIdentifierType t = (UIdentifierType)i;
+        UIdentifierType t = static_cast<UIdentifierType>(i);
         bool expected = (typeBits & (1UL << i)) != 0;
         bool actual = u_hasIDType(c, t);
         if (actual != expected) {
