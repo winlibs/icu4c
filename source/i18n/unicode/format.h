@@ -95,13 +95,13 @@ U_NAMESPACE_BEGIN
  * subclasses, such code will not necessarily work and will not be
  * guaranteed to work stably from release to release.
  */
-class U_I18N_API_CLASS Format : public UObject {
+class U_I18N_API Format : public UObject {
 public:
 
     /** Destructor
      * @stable ICU 2.4
      */
-    U_I18N_API virtual ~Format();
+    virtual ~Format();
 
     /**
      * Return true if the given Format objects are semantically equal.
@@ -111,7 +111,7 @@ public:
      *                 Objects of different subclasses are considered unequal.
      * @stable ICU 2.0
      */
-    U_I18N_API virtual bool operator==(const Format& other) const = 0;
+    virtual bool operator==(const Format& other) const = 0;
 
     /**
      * Return true if the given Format objects are not semantically
@@ -120,7 +120,7 @@ public:
      * @return         Return true if the given Format objects are not semantically.
      * @stable ICU 2.0
      */
-    U_I18N_API bool operator!=(const Format& other) const { return !operator==(other); }
+    bool operator!=(const Format& other) const { return !operator==(other); }
 
     /**
      * Clone this object polymorphically.  The caller is responsible
@@ -128,7 +128,7 @@ public:
      * @return    A copy of the object
      * @stable ICU 2.0
      */
-    U_I18N_API virtual Format* clone() const = 0;
+    virtual Format* clone() const = 0;
 
     /**
      * Formats an object to produce a string.
@@ -140,7 +140,7 @@ public:
      * @return          Reference to 'appendTo' parameter.
      * @stable ICU 2.0
      */
-    U_I18N_API UnicodeString& format(const Formattable& obj,
+    UnicodeString& format(const Formattable& obj,
                                      UnicodeString& appendTo,
                                      UErrorCode& status) const;
 
@@ -160,7 +160,7 @@ public:
      * @return          Reference to 'appendTo' parameter.
      * @stable ICU 2.0
      */
-    U_I18N_API virtual UnicodeString& format(const Formattable& obj,
+    virtual UnicodeString& format(const Formattable& obj,
                                              UnicodeString& appendTo,
                                              FieldPosition& pos,
                                              UErrorCode& status) const = 0;
@@ -181,7 +181,7 @@ public:
      * @return          Reference to 'appendTo' parameter.
      * @stable ICU 4.4
      */
-    U_I18N_API virtual UnicodeString& format(const Formattable& obj,
+    virtual UnicodeString& format(const Formattable& obj,
                                              UnicodeString& appendTo,
                                              FieldPositionIterator* posIter,
                                              UErrorCode& status) const;
@@ -225,7 +225,7 @@ public:
      *                  will remain unchanged.
      * @stable ICU 2.0
      */
-    U_I18N_API virtual void parseObject(const UnicodeString& source,
+    virtual void parseObject(const UnicodeString& source,
                                         Formattable& result,
                                         ParsePosition& parse_pos) const = 0;
 
@@ -241,7 +241,7 @@ public:
      *                  result code.
      * @stable ICU 2.0
      */
-    U_I18N_API void parseObject(const UnicodeString& source,
+    void parseObject(const UnicodeString& source,
                                 Formattable& result,
                                 UErrorCode& status) const;
 
@@ -251,7 +251,7 @@ public:
      *  @return the locale
      *  @stable ICU 2.8
      */
-    U_I18N_API Locale getLocale(ULocDataLocaleType type, UErrorCode& status) const;
+    Locale getLocale(ULocDataLocaleType type, UErrorCode& status) const;
 
 #ifndef U_HIDE_INTERNAL_API
     /** Get the locale for this format object. You can choose between valid and actual locale.
@@ -260,29 +260,29 @@ public:
      *  @return the locale
      *  @internal
      */
-    U_I18N_API const char* getLocaleID(ULocDataLocaleType type, UErrorCode& status) const;
+    const char* getLocaleID(ULocDataLocaleType type, UErrorCode& status) const;
 #endif  /* U_HIDE_INTERNAL_API */
 
  protected:
     /** @stable ICU 2.8 */
-    U_I18N_API void setLocaleIDs(const char* valid, const char* actual);
+    void setLocaleIDs(const char* valid, const char* actual);
 
 protected:
     /**
      * Default constructor for subclass use only.  Does nothing.
      * @stable ICU 2.0
      */
-    U_I18N_API Format();
+    Format();
 
     /**
      * @stable ICU 2.0
      */
-    U_I18N_API Format(const Format&); // Does nothing; for subclasses only
+    Format(const Format&); // Does nothing; for subclasses only
 
     /**
      * @stable ICU 2.0
      */
-    U_I18N_API Format& operator=(const Format&); // Does nothing; for subclasses
+    Format& operator=(const Format&); // Does nothing; for subclasses
 
     /**
      * Simple function for initializing a UParseError from a UnicodeString.
@@ -292,7 +292,7 @@ protected:
      * @param parseError The UParseError object to fill in
      * @stable ICU 2.4
      */
-    U_I18N_API static void syntaxError(const UnicodeString& pattern,
+    static void syntaxError(const UnicodeString& pattern,
                                        int32_t pos,
                                        UParseError& parseError);
 

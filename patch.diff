@@ -1,0 +1,1759 @@
+diff --git a/source/common/unicode/brkiter.h b/source/common/unicode/brkiter.h
+index 088592b..446f0bb 100644
+--- a/source/common/unicode/brkiter.h
++++ b/source/common/unicode/brkiter.h
+@@ -103,13 +103,13 @@ U_NAMESPACE_BEGIN
+  * and in the sample program icu/source/samples/break/break.cpp
+  *
+  */
+-class U_COMMON_API_CLASS BreakIterator : public UObject {
++class U_COMMON_API BreakIterator : public UObject {
+ public:
+     /**
+      *  destructor
+      *  @stable ICU 2.0
+      */
+-    U_COMMON_API virtual ~BreakIterator();
++    virtual ~BreakIterator();
+ 
+     /**
+      * Return true if another object is semantically equal to this
+@@ -124,7 +124,7 @@ public:
+      * object, and styles are not considered.
+      * @stable ICU 2.0
+      */
+-    U_COMMON_API virtual bool operator==(const BreakIterator&) const = 0;
++    virtual bool operator==(const BreakIterator&) const = 0;
+ 
+     /**
+      * Returns the complement of the result of operator==
+@@ -132,27 +132,27 @@ public:
+      * @return the complement of the result of operator==
+      * @stable ICU 2.0
+      */
+-    U_COMMON_API bool operator!=(const BreakIterator& rhs) const { return !operator==(rhs); }
++    bool operator!=(const BreakIterator& rhs) const { return !operator==(rhs); }
+ 
+     /**
+      * Return a polymorphic copy of this object.  This is an abstract
+      * method which subclasses implement.
+      * @stable ICU 2.0
+      */
+-    U_COMMON_API virtual BreakIterator* clone() const = 0;
++    virtual BreakIterator* clone() const = 0;
+ 
+     /**
+      * Return a polymorphic class ID for this object. Different subclasses
+      * will return distinct unequal values.
+      * @stable ICU 2.0
+      */
+-    U_COMMON_API virtual UClassID getDynamicClassID() const override = 0;
++    virtual UClassID getDynamicClassID() const override = 0;
+ 
+     /**
+      * Return a CharacterIterator over the text being analyzed.
+      * @stable ICU 2.0
+      */
+-    U_COMMON_API virtual CharacterIterator& getText() const = 0;
++    virtual CharacterIterator& getText() const = 0;
+ 
+     /**
+       *  Get a UText for the text being analyzed.
+@@ -168,7 +168,7 @@ public:
+       *           UText was provided, it will always be returned.
+       * @stable ICU 3.4
+       */
+-    U_COMMON_API virtual UText* getUText(UText* fillIn, UErrorCode& status) const = 0;
++    virtual UText* getUText(UText* fillIn, UErrorCode& status) const = 0;
+ 
+     /**
+      * Change the text over which this operates. The text boundary is
+@@ -181,7 +181,7 @@ public:
+      * @param text The UnicodeString used to change the text.
+      * @stable ICU 2.0
+      */
+-    U_COMMON_API virtual void setText(const UnicodeString& text) = 0;
++    virtual void setText(const UnicodeString& text) = 0;
+ 
+     /**
+      * Reset the break iterator to operate over the text represented by
+@@ -201,7 +201,7 @@ public:
+      * @param status receives any error codes.
+      * @stable ICU 3.4
+      */
+-    U_COMMON_API virtual void setText(UText* text, UErrorCode& status) = 0;
++    virtual void setText(UText* text, UErrorCode& status) = 0;
+ 
+     /**
+      * Change the text over which this operates. The text boundary is
+@@ -211,7 +211,7 @@ public:
+      * @param it The CharacterIterator used to change the text.
+      * @stable ICU 2.0
+      */
+-    U_COMMON_API virtual void adoptText(CharacterIterator* it) = 0;
++    virtual void adoptText(CharacterIterator* it) = 0;
+ 
+     enum {
+         /**
+@@ -227,14 +227,14 @@ public:
+      * @return The offset of the beginning of the text, zero.
+      * @stable ICU 2.0
+      */
+-    U_COMMON_API virtual int32_t first() = 0;
++    virtual int32_t first() = 0;
+ 
+     /**
+      * Set the iterator position to the index immediately BEYOND the last character in the text being scanned.
+      * @return The index immediately BEYOND the last character in the text being scanned.
+      * @stable ICU 2.0
+      */
+-    U_COMMON_API virtual int32_t last() = 0;
++    virtual int32_t last() = 0;
+ 
+     /**
+      * Set the iterator position to the boundary preceding the current boundary.
+@@ -242,7 +242,7 @@ public:
+      * boundaries have been returned.
+      * @stable ICU 2.0
+      */
+-    U_COMMON_API virtual int32_t previous() = 0;
++    virtual int32_t previous() = 0;
+ 
+     /**
+      * Advance the iterator to the boundary following the current boundary.
+@@ -250,14 +250,14 @@ public:
+      * boundaries have been returned.
+      * @stable ICU 2.0
+      */
+-    U_COMMON_API virtual int32_t next() = 0;
++    virtual int32_t next() = 0;
+ 
+     /**
+      * Return character index of the current iterator position within the text.
+      * @return The boundary most recently returned.
+      * @stable ICU 2.0
+      */
+-    U_COMMON_API virtual int32_t current() const = 0;
++    virtual int32_t current() const = 0;
+ 
+     /**
+      * Advance the iterator to the first boundary following the specified offset.
+@@ -267,7 +267,7 @@ public:
+      * @return The first boundary after the specified offset.
+      * @stable ICU 2.0
+      */
+-    U_COMMON_API virtual int32_t following(int32_t offset) = 0;
++    virtual int32_t following(int32_t offset) = 0;
+ 
+     /**
+      * Set the iterator position to the first boundary preceding the specified offset.
+@@ -277,7 +277,7 @@ public:
+      * @return The first boundary before the specified offset.
+      * @stable ICU 2.0
+      */
+-    U_COMMON_API virtual int32_t preceding(int32_t offset) = 0;
++    virtual int32_t preceding(int32_t offset) = 0;
+ 
+     /**
+      * Return true if the specified position is a boundary position.
+@@ -287,7 +287,7 @@ public:
+      * @return True if "offset" is a boundary position.
+      * @stable ICU 2.0
+      */
+-    U_COMMON_API virtual UBool isBoundary(int32_t offset) = 0;
++    virtual UBool isBoundary(int32_t offset) = 0;
+ 
+     /**
+      * Set the iterator position to the nth boundary from the current boundary
+@@ -298,7 +298,7 @@ public:
+      * DONE if there are fewer than |n| boundaries in the specified direction.
+      * @stable ICU 2.0
+      */
+-    U_COMMON_API virtual int32_t next(int32_t n) = 0;
++    virtual int32_t next(int32_t n) = 0;
+ 
+     /**
+      * For RuleBasedBreakIterators, return the status tag from the break rule
+@@ -313,7 +313,7 @@ public:
+      * @see UWordBreak
+      * @stable ICU 52
+      */
+-    U_COMMON_API virtual int32_t getRuleStatus() const;
++    virtual int32_t getRuleStatus() const;
+ 
+    /**
+     * For RuleBasedBreakIterators, get the status (tag) values from the break rule(s)
+@@ -343,7 +343,7 @@ public:
+     * @see getRuleStatus
+     * @stable ICU 52
+     */
+-    U_COMMON_API virtual int32_t getRuleStatusVec(int32_t* fillInVec,
++    virtual int32_t getRuleStatusVec(int32_t* fillInVec,
+                                                   int32_t capacity,
+                                                   UErrorCode& status);
+ 
+@@ -366,7 +366,7 @@ public:
+      * The caller owns the returned object and is responsible for deleting it.
+      * @stable ICU 2.0
+      */
+-    U_COMMON_API static BreakIterator* U_EXPORT2
++    static BreakIterator* U_EXPORT2
+     createWordInstance(const Locale& where, UErrorCode& status);
+ 
+     /**
+@@ -390,7 +390,7 @@ public:
+      * The caller owns the returned object and is responsible for deleting it.
+      * @stable ICU 2.0
+      */
+-    U_COMMON_API static BreakIterator* U_EXPORT2
++    static BreakIterator* U_EXPORT2
+     createLineInstance(const Locale& where, UErrorCode& status);
+ 
+     /**
+@@ -412,7 +412,7 @@ public:
+      * The caller owns the returned object and is responsible for deleting it.
+      * @stable ICU 2.0
+      */
+-    U_COMMON_API static BreakIterator* U_EXPORT2
++    static BreakIterator* U_EXPORT2
+     createCharacterInstance(const Locale& where, UErrorCode& status);
+ 
+     /**
+@@ -433,7 +433,7 @@ public:
+      * The caller owns the returned object and is responsible for deleting it.
+      * @stable ICU 2.0
+      */
+-    U_COMMON_API static BreakIterator* U_EXPORT2
++    static BreakIterator* U_EXPORT2
+     createSentenceInstance(const Locale& where, UErrorCode& status);
+ 
+ #ifndef U_HIDE_DEPRECATED_API
+@@ -459,7 +459,7 @@ public:
+      * The caller owns the returned object and is responsible for deleting it.
+      * @deprecated ICU 64 Use createWordInstance instead.
+      */
+-    U_COMMON_API static BreakIterator* U_EXPORT2
++    static BreakIterator* U_EXPORT2
+     createTitleInstance(const Locale& where, UErrorCode& status);
+ #endif /* U_HIDE_DEPRECATED_API */
+ 
+@@ -472,7 +472,7 @@ public:
+      * @return available locales
+      * @stable ICU 2.0
+      */
+-    U_COMMON_API static const Locale* U_EXPORT2 getAvailableLocales(int32_t& count);
++    static const Locale* U_EXPORT2 getAvailableLocales(int32_t& count);
+ 
+     /**
+      * Get name of the object for the desired Locale, in the desired language.
+@@ -483,7 +483,7 @@ public:
+      * @return user-displayable name
+      * @stable ICU 2.0
+      */
+-    U_COMMON_API static UnicodeString& U_EXPORT2 getDisplayName(const Locale& objectLocale,
++    static UnicodeString& U_EXPORT2 getDisplayName(const Locale& objectLocale,
+                                                                 const Locale& displayLocale,
+                                                                 UnicodeString& name);
+ 
+@@ -495,7 +495,7 @@ public:
+      * @return user-displayable name
+      * @stable ICU 2.0
+      */
+-    U_COMMON_API static UnicodeString& U_EXPORT2 getDisplayName(const Locale& objectLocale,
++    static UnicodeString& U_EXPORT2 getDisplayName(const Locale& objectLocale,
+                                                                 UnicodeString& name);
+ 
+ #ifndef U_FORCE_HIDE_DEPRECATED_API
+@@ -518,7 +518,7 @@ public:
+      *
+      * @deprecated ICU 52. Use clone() instead.
+      */
+-    U_COMMON_API virtual BreakIterator* createBufferClone(void* stackBuffer,
++    virtual BreakIterator* createBufferClone(void* stackBuffer,
+                                                           int32_t& BufferSize,
+                                                           UErrorCode& status) = 0;
+ #endif  // U_FORCE_HIDE_DEPRECATED_API
+@@ -531,7 +531,7 @@ public:
+      *   must be closed by an explicit call to the destructor (not delete).
+      * @deprecated ICU 52. Always delete the BreakIterator.
+      */
+-    U_COMMON_API inline UBool isBufferClone();
++    inline UBool isBufferClone();
+ 
+ #endif /* U_HIDE_DEPRECATED_API */
+ 
+@@ -551,7 +551,7 @@ public:
+      * @return a registry key that can be used to unregister this instance
+      * @stable ICU 2.4
+      */
+-    U_COMMON_API static URegistryKey U_EXPORT2 registerInstance(BreakIterator* toAdopt,
++    static URegistryKey U_EXPORT2 registerInstance(BreakIterator* toAdopt,
+                                                                 const Locale& locale,
+                                                                 UBreakIteratorType kind,
+                                                                 UErrorCode& status);
+@@ -568,7 +568,7 @@ public:
+      * @return true if the iterator for the key was successfully unregistered
+      * @stable ICU 2.4
+      */
+-    U_COMMON_API static UBool U_EXPORT2 unregister(URegistryKey key, UErrorCode& status);
++    static UBool U_EXPORT2 unregister(URegistryKey key, UErrorCode& status);
+ 
+     /**
+      * Return a StringEnumeration over the locales available at the time of the call,
+@@ -576,7 +576,7 @@ public:
+      * @return a StringEnumeration over the locales available at the time of the call
+      * @stable ICU 2.4
+      */
+-    U_COMMON_API static StringEnumeration* U_EXPORT2 getAvailableLocales();
++    static StringEnumeration* U_EXPORT2 getAvailableLocales();
+ #endif
+ 
+     /**
+@@ -584,7 +584,7 @@ public:
+      * actual locale.
+      * @stable ICU 2.8
+      */
+-    U_COMMON_API Locale getLocale(ULocDataLocaleType type, UErrorCode& status) const;
++    Locale getLocale(ULocDataLocaleType type, UErrorCode& status) const;
+ 
+ #ifndef U_HIDE_INTERNAL_API
+     /** Get the locale for this break iterator object. You can choose between valid and actual locale.
+@@ -593,7 +593,7 @@ public:
+      *  @return the locale
+      *  @internal
+      */
+-    U_COMMON_API const char* getLocaleID(ULocDataLocaleType type, UErrorCode& status) const;
++    const char* getLocaleID(ULocDataLocaleType type, UErrorCode& status) const;
+ #endif  /* U_HIDE_INTERNAL_API */
+ 
+     /**
+@@ -621,7 +621,7 @@ public:
+      *
+      * @stable ICU 49
+      */
+-    U_COMMON_API virtual BreakIterator& refreshInputText(UText* input, UErrorCode& status) = 0;
++    virtual BreakIterator& refreshInputText(UText* input, UErrorCode& status) = 0;
+ 
+  private:
+     static BreakIterator* buildInstance(const Locale& loc, const char *type, UErrorCode& status);
+@@ -635,14 +635,14 @@ protected:
+     // Do not enclose protected default/copy constructors with #ifndef U_HIDE_INTERNAL_API
+     // or else the compiler will create a public ones.
+     /** @internal */
+-    U_COMMON_API BreakIterator();
++    BreakIterator();
+     /** @internal */
+-    U_COMMON_API BreakIterator(const BreakIterator& other);
++    BreakIterator(const BreakIterator& other);
+ #ifndef U_HIDE_INTERNAL_API
+     /** @internal */
+-    U_COMMON_API BreakIterator(const Locale& valid, const Locale& actual);
++    BreakIterator(const Locale& valid, const Locale& actual);
+     /** @internal. Assignment Operator, used by RuleBasedBreakIterator. */
+-    U_COMMON_API BreakIterator& operator=(const BreakIterator& other);
++    BreakIterator& operator=(const BreakIterator& other);
+ #endif  /* U_HIDE_INTERNAL_API */
+ 
+ private:
+diff --git a/source/i18n/unicode/calendar.h b/source/i18n/unicode/calendar.h
+index dfcdd3f..83d50e1 100644
+--- a/source/i18n/unicode/calendar.h
++++ b/source/i18n/unicode/calendar.h
+@@ -186,7 +186,7 @@ class BasicTimeZone;
+  *
+  * @stable ICU 2.0
+  */
+-class U_I18N_API_CLASS Calendar : public UObject {
++class U_I18N_API Calendar : public UObject {
+ public:
+ #ifndef U_FORCE_HIDE_DEPRECATED_API
+     /**
+@@ -284,7 +284,7 @@ public:
+      * destructor
+      * @stable ICU 2.0
+      */
+-    U_I18N_API virtual ~Calendar();
++    virtual ~Calendar();
+ 
+     /**
+      * Create and return a polymorphic copy of this calendar.
+@@ -292,7 +292,7 @@ public:
+      * @return    a polymorphic copy of this calendar.
+      * @stable ICU 2.0
+      */
+-    U_I18N_API virtual Calendar* clone() const = 0;
++    virtual Calendar* clone() const = 0;
+ 
+     /**
+      * Creates a Calendar using the default timezone and locale. Clients are responsible
+@@ -305,7 +305,7 @@ public:
+      * @return         A Calendar if created successfully. nullptr otherwise.
+      * @stable ICU 2.0
+      */
+-    U_I18N_API static Calendar* U_EXPORT2 createInstance(UErrorCode& success);
++    static Calendar* U_EXPORT2 createInstance(UErrorCode& success);
+ 
+     /**
+      * Creates a Calendar using the given timezone and the default locale.
+@@ -319,7 +319,7 @@ public:
+      * @return             A Calendar if created successfully. nullptr otherwise.
+      * @stable ICU 2.0
+      */
+-    U_I18N_API static Calendar* U_EXPORT2 createInstance(TimeZone* zoneToAdopt, UErrorCode& success);
++    static Calendar* U_EXPORT2 createInstance(TimeZone* zoneToAdopt, UErrorCode& success);
+ 
+     /**
+      * Creates a Calendar using the given timezone and the default locale.  The TimeZone
+@@ -332,7 +332,7 @@ public:
+      * @return             A Calendar if created successfully. nullptr otherwise.
+      * @stable ICU 2.0
+      */
+-    U_I18N_API static Calendar* U_EXPORT2 createInstance(const TimeZone& zone, UErrorCode& success);
++    static Calendar* U_EXPORT2 createInstance(const TimeZone& zone, UErrorCode& success);
+ 
+     /**
+      * Creates a Calendar using the default timezone and the given locale.
+@@ -344,7 +344,7 @@ public:
+      * @return         A Calendar if created successfully. nullptr otherwise.
+      * @stable ICU 2.0
+      */
+-    U_I18N_API static Calendar* U_EXPORT2 createInstance(const Locale& aLocale, UErrorCode& success);
++    static Calendar* U_EXPORT2 createInstance(const Locale& aLocale, UErrorCode& success);
+ 
+     /**
+      * Creates a Calendar using the given timezone and given locale.
+@@ -359,7 +359,7 @@ public:
+      * @return             A Calendar if created successfully. nullptr otherwise.
+      * @stable ICU 2.0
+      */
+-    U_I18N_API static Calendar* U_EXPORT2 createInstance(TimeZone* zoneToAdopt,
++    static Calendar* U_EXPORT2 createInstance(TimeZone* zoneToAdopt,
+                                                          const Locale& aLocale,
+                                                          UErrorCode& success);
+ 
+@@ -375,7 +375,7 @@ public:
+      * @return             A Calendar if created successfully. nullptr otherwise.
+      * @stable ICU 2.0
+      */
+-    U_I18N_API static Calendar* U_EXPORT2 createInstance(const TimeZone& zone,
++    static Calendar* U_EXPORT2 createInstance(const TimeZone& zone,
+                                                          const Locale& aLocale,
+                                                          UErrorCode& success);
+ 
+@@ -388,7 +388,7 @@ public:
+      *               the caller must NOT delete it. Does not include user-registered Calendars.
+      * @stable ICU 2.0
+      */
+-    U_I18N_API static const Locale* U_EXPORT2 getAvailableLocales(int32_t& count);
++    static const Locale* U_EXPORT2 getAvailableLocales(int32_t& count);
+ 
+     /**
+      * Given a key and a locale, returns an array of string values in a preferred
+@@ -406,7 +406,7 @@ public:
+      * @return a string enumeration over keyword values for the given key and the locale.
+      * @stable ICU 4.2
+      */
+-    U_I18N_API static StringEnumeration* U_EXPORT2 getKeywordValuesForLocale(const char* key,
++    static StringEnumeration* U_EXPORT2 getKeywordValuesForLocale(const char* key,
+                                                                              const Locale& locale,
+                                                                              UBool commonlyUsed,
+                                                                              UErrorCode& status);
+@@ -418,7 +418,7 @@ public:
+      * @return   The current UTC time in milliseconds.
+      * @stable ICU 2.0
+      */
+-    U_I18N_API static UDate U_EXPORT2 getNow();
++    static UDate U_EXPORT2 getNow();
+ 
+     /**
+      * Gets this Calendar's time as milliseconds. May involve recalculation of time due
+@@ -433,7 +433,7 @@ public:
+      *                failed.
+      * @stable ICU 2.0
+      */
+-    U_I18N_API inline UDate getTime(UErrorCode& status) const { return getTimeInMillis(status); }
++    inline UDate getTime(UErrorCode& status) const { return getTimeInMillis(status); }
+ 
+     /**
+      * Sets this Calendar's current time with the given UDate. The time specified should
+@@ -445,7 +445,7 @@ public:
+      *                leniency, this will be set to an error status.
+      * @stable ICU 2.0
+      */
+-    U_I18N_API inline void setTime(UDate date, UErrorCode& status) { setTimeInMillis(date, status); }
++    inline void setTime(UDate date, UErrorCode& status) { setTimeInMillis(date, status); }
+ 
+     /**
+      * Compares the equality of two Calendar objects. Objects of different subclasses
+@@ -458,7 +458,7 @@ public:
+      *              otherwise.
+      * @stable ICU 2.0
+      */
+-    U_I18N_API virtual bool operator==(const Calendar& that) const;
++    virtual bool operator==(const Calendar& that) const;
+ 
+     /**
+      * Compares the inequality of two Calendar objects.
+@@ -468,7 +468,7 @@ public:
+      *              otherwise.
+      * @stable ICU 2.0
+      */
+-    U_I18N_API bool operator!=(const Calendar& that) const { return !operator==(that); }
++    bool operator!=(const Calendar& that) const { return !operator==(that); }
+ 
+     /**
+      * Returns true if the given Calendar object is equivalent to this
+@@ -480,7 +480,7 @@ public:
+      * @param other the Calendar to be compared with this Calendar
+      * @stable ICU 2.4
+      */
+-    U_I18N_API virtual UBool isEquivalentTo(const Calendar& other) const;
++    virtual UBool isEquivalentTo(const Calendar& other) const;
+ 
+     /**
+      * Compares the Calendar time, whereas Calendar::operator== compares the equality of
+@@ -496,7 +496,7 @@ public:
+      *                Calendar when; false otherwise.
+      * @stable ICU 2.0
+      */
+-    U_I18N_API UBool equals(const Calendar& when, UErrorCode& status) const;
++    UBool equals(const Calendar& when, UErrorCode& status) const;
+ 
+     /**
+      * Returns true if this Calendar's current time is before "when"'s current time.
+@@ -511,7 +511,7 @@ public:
+      *                Calendar when; false otherwise.
+      * @stable ICU 2.0
+      */
+-    U_I18N_API UBool before(const Calendar& when, UErrorCode& status) const;
++    UBool before(const Calendar& when, UErrorCode& status) const;
+ 
+     /**
+      * Returns true if this Calendar's current time is after "when"'s current time.
+@@ -526,7 +526,7 @@ public:
+      *                Calendar when; false otherwise.
+      * @stable ICU 2.0
+      */
+-    U_I18N_API UBool after(const Calendar& when, UErrorCode& status) const;
++    UBool after(const Calendar& when, UErrorCode& status) const;
+ 
+ #ifndef U_FORCE_HIDE_DEPRECATED_API
+     /**
+@@ -549,7 +549,7 @@ public:
+      *                leniency, this will be set to an error status.
+      * @deprecated ICU 2.6. use add(UCalendarDateFields field, int32_t amount, UErrorCode& status) instead.
+      */
+-    U_I18N_API virtual void add(EDateFields field, int32_t amount, UErrorCode& status);
++    virtual void add(EDateFields field, int32_t amount, UErrorCode& status);
+ #endif  // U_FORCE_HIDE_DEPRECATED_API
+ 
+     /**
+@@ -572,7 +572,7 @@ public:
+      *                leniency, this will be set to an error status.
+      * @stable ICU 2.6.
+      */
+-    U_I18N_API virtual void add(UCalendarDateFields field, int32_t amount, UErrorCode& status);
++    virtual void add(UCalendarDateFields field, int32_t amount, UErrorCode& status);
+ 
+ #ifndef U_HIDE_DEPRECATED_API
+     /**
+@@ -607,7 +607,7 @@ public:
+      *                leniency, this will be set to an error status.
+      * @deprecated ICU 2.6. Use roll(UCalendarDateFields field, UBool up, UErrorCode& status) instead.
+      */
+-    U_I18N_API inline void roll(EDateFields field, UBool up, UErrorCode& status);
++    inline void roll(EDateFields field, UBool up, UErrorCode& status);
+ #endif  /* U_HIDE_DEPRECATED_API */
+ 
+     /**
+@@ -642,7 +642,7 @@ public:
+      *                leniency, this will be set to an error status.
+      * @stable ICU 2.6.
+      */
+-    U_I18N_API inline void roll(UCalendarDateFields field, UBool up, UErrorCode& status);
++    inline void roll(UCalendarDateFields field, UBool up, UErrorCode& status);
+ 
+ #ifndef U_FORCE_HIDE_DEPRECATED_API
+     /**
+@@ -676,7 +676,7 @@ public:
+      *                an error status.
+      * @deprecated ICU 2.6. Use roll(UCalendarDateFields field, int32_t amount, UErrorCode& status) instead.
+      */
+-    U_I18N_API virtual void roll(EDateFields field, int32_t amount, UErrorCode& status);
++    virtual void roll(EDateFields field, int32_t amount, UErrorCode& status);
+ #endif  // U_FORCE_HIDE_DEPRECATED_API
+ 
+     /**
+@@ -710,7 +710,7 @@ public:
+      *                an error status.
+      * @stable ICU 2.6.
+      */
+-    U_I18N_API virtual void roll(UCalendarDateFields field, int32_t amount, UErrorCode& status);
++    virtual void roll(UCalendarDateFields field, int32_t amount, UErrorCode& status);
+ 
+ #ifndef U_FORCE_HIDE_DEPRECATED_API
+     /**
+@@ -768,7 +768,7 @@ public:
+      * <code>field</code>.
+      * @deprecated ICU 2.6. Use fieldDifference(UDate when, UCalendarDateFields field, UErrorCode& status).
+      */
+-    U_I18N_API virtual int32_t fieldDifference(UDate when, EDateFields field, UErrorCode& status);
++    virtual int32_t fieldDifference(UDate when, EDateFields field, UErrorCode& status);
+ #endif  // U_FORCE_HIDE_DEPRECATED_API
+ 
+     /**
+@@ -826,7 +826,7 @@ public:
+      * <code>field</code>.
+      * @stable ICU 2.6.
+      */
+-    U_I18N_API virtual int32_t fieldDifference(UDate when,
++    virtual int32_t fieldDifference(UDate when,
+                                                UCalendarDateFields field,
+                                                UErrorCode& status);
+ 
+@@ -838,7 +838,7 @@ public:
+      * @param value  The given time zone.
+      * @stable ICU 2.0
+      */
+-    U_I18N_API void adoptTimeZone(TimeZone* value);
++    void adoptTimeZone(TimeZone* value);
+ 
+     /**
+      * Sets the calendar's time zone to be the same as the one passed in. The TimeZone
+@@ -847,7 +847,7 @@ public:
+      * @param zone  The given time zone.
+      * @stable ICU 2.0
+      */
+-    U_I18N_API void setTimeZone(const TimeZone& zone);
++    void setTimeZone(const TimeZone& zone);
+ 
+     /**
+      * Returns a reference to the time zone owned by this calendar. The returned reference
+@@ -857,7 +857,7 @@ public:
+      * @return   The time zone object associated with this calendar.
+      * @stable ICU 2.0
+      */
+-    U_I18N_API const TimeZone& getTimeZone() const;
++    const TimeZone& getTimeZone() const;
+ 
+     /**
+      * Returns the time zone owned by this calendar. The caller owns the returned object
+@@ -867,7 +867,7 @@ public:
+      * @return   The time zone object which was associated with this calendar.
+      * @stable ICU 2.0
+      */
+-    U_I18N_API TimeZone* orphanTimeZone();
++    TimeZone* orphanTimeZone();
+ 
+     /**
+      * Queries if the current date for this Calendar is in Daylight Savings Time.
+@@ -877,7 +877,7 @@ public:
+      *           false, otherwise.
+      * @stable ICU 2.0
+      */
+-    U_I18N_API virtual UBool inDaylightTime(UErrorCode& status) const;
++    virtual UBool inDaylightTime(UErrorCode& status) const;
+ 
+     /**
+      * Specifies whether or not date/time interpretation is to be lenient. With lenient
+@@ -891,7 +891,7 @@ public:
+      * @see            DateFormat#setLenient
+      * @stable ICU 2.0
+      */
+-    U_I18N_API void setLenient(UBool lenient);
++    void setLenient(UBool lenient);
+ 
+     /**
+      * Tells whether date/time interpretation is to be lenient.
+@@ -899,7 +899,7 @@ public:
+      * @return   True tells that date/time interpretation is to be lenient.
+      * @stable ICU 2.0
+      */
+-    U_I18N_API UBool isLenient() const;
++    UBool isLenient() const;
+ 
+     /**
+      * Sets the behavior for handling wall time repeating multiple times
+@@ -921,7 +921,7 @@ public:
+      * @see #getRepeatedWallTimeOption
+      * @stable ICU 49
+      */
+-    U_I18N_API void setRepeatedWallTimeOption(UCalendarWallTimeOption option);
++    void setRepeatedWallTimeOption(UCalendarWallTimeOption option);
+ 
+     /**
+      * Gets the behavior for handling wall time repeating multiple times
+@@ -932,7 +932,7 @@ public:
+      * @see #setRepeatedWallTimeOption
+      * @stable ICU 49
+      */
+-    U_I18N_API UCalendarWallTimeOption getRepeatedWallTimeOption() const;
++    UCalendarWallTimeOption getRepeatedWallTimeOption() const;
+ 
+     /**
+      * Sets the behavior for handling skipped wall time at positive time zone offset
+@@ -955,7 +955,7 @@ public:
+      *
+      * @stable ICU 49
+      */
+-    U_I18N_API void setSkippedWallTimeOption(UCalendarWallTimeOption option);
++    void setSkippedWallTimeOption(UCalendarWallTimeOption option);
+ 
+     /**
+      * Gets the behavior for handling skipped wall time at positive time zone offset
+@@ -967,7 +967,7 @@ public:
+      * @see #setSkippedWallTimeOption
+      * @stable ICU 49
+      */
+-    U_I18N_API UCalendarWallTimeOption getSkippedWallTimeOption() const;
++    UCalendarWallTimeOption getSkippedWallTimeOption() const;
+ 
+     /**
+      * Sets what the first day of the week is; e.g., Sunday in US, Monday in France.
+@@ -975,7 +975,7 @@ public:
+      * @param value  The given first day of the week.
+      * @stable ICU 2.6.
+      */
+-    U_I18N_API void setFirstDayOfWeek(UCalendarDaysOfWeek value);
++    void setFirstDayOfWeek(UCalendarDaysOfWeek value);
+ 
+ #ifndef U_HIDE_DEPRECATED_API
+     /**
+@@ -984,7 +984,7 @@ public:
+      * @return   The first day of the week.
+      * @deprecated ICU 2.6 use the overload with error code
+      */
+-    U_I18N_API EDaysOfWeek getFirstDayOfWeek() const;
++    EDaysOfWeek getFirstDayOfWeek() const;
+ #endif  /* U_HIDE_DEPRECATED_API */
+ 
+     /**
+@@ -994,7 +994,7 @@ public:
+      * @return   The first day of the week.
+      * @stable ICU 2.6
+      */
+-    U_I18N_API UCalendarDaysOfWeek getFirstDayOfWeek(UErrorCode& status) const;
++    UCalendarDaysOfWeek getFirstDayOfWeek(UErrorCode& status) const;
+ 
+     /**
+      * Sets what the minimal days required in the first week of the year are; For
+@@ -1005,7 +1005,7 @@ public:
+      * @param value  The given minimal days required in the first week of the year.
+      * @stable ICU 2.0
+      */
+-    U_I18N_API void setMinimalDaysInFirstWeek(uint8_t value);
++    void setMinimalDaysInFirstWeek(uint8_t value);
+ 
+     /**
+      * Gets what the minimal days required in the first week of the year are; e.g., if
+@@ -1016,7 +1016,7 @@ public:
+      * @return   The minimal days required in the first week of the year.
+      * @stable ICU 2.0
+      */
+-    U_I18N_API uint8_t getMinimalDaysInFirstWeek() const;
++    uint8_t getMinimalDaysInFirstWeek() const;
+ 
+ #ifndef U_FORCE_HIDE_DEPRECATED_API
+     /**
+@@ -1027,7 +1027,7 @@ public:
+      * @return       The minimum value for the given time field.
+      * @deprecated ICU 2.6. Use getMinimum(UCalendarDateFields field) instead.
+      */
+-    U_I18N_API virtual int32_t getMinimum(EDateFields field) const;
++    virtual int32_t getMinimum(EDateFields field) const;
+ #endif  // U_FORCE_HIDE_DEPRECATED_API
+ 
+     /**
+@@ -1038,7 +1038,7 @@ public:
+      * @return       The minimum value for the given time field.
+      * @stable ICU 2.6.
+      */
+-    U_I18N_API virtual int32_t getMinimum(UCalendarDateFields field) const;
++    virtual int32_t getMinimum(UCalendarDateFields field) const;
+ 
+ #ifndef U_FORCE_HIDE_DEPRECATED_API
+     /**
+@@ -1049,7 +1049,7 @@ public:
+      * @return       The maximum value for the given time field.
+      * @deprecated ICU 2.6. Use getMaximum(UCalendarDateFields field) instead.
+      */
+-    U_I18N_API virtual int32_t getMaximum(EDateFields field) const;
++    virtual int32_t getMaximum(EDateFields field) const;
+ #endif  // U_FORCE_HIDE_DEPRECATED_API
+ 
+     /**
+@@ -1060,7 +1060,7 @@ public:
+      * @return       The maximum value for the given time field.
+      * @stable ICU 2.6.
+      */
+-    U_I18N_API virtual int32_t getMaximum(UCalendarDateFields field) const;
++    virtual int32_t getMaximum(UCalendarDateFields field) const;
+ 
+ #ifndef U_FORCE_HIDE_DEPRECATED_API
+     /**
+@@ -1071,7 +1071,7 @@ public:
+      * @return       The highest minimum value for the given time field.
+      * @deprecated ICU 2.6. Use getGreatestMinimum(UCalendarDateFields field) instead.
+      */
+-    U_I18N_API virtual int32_t getGreatestMinimum(EDateFields field) const;
++    virtual int32_t getGreatestMinimum(EDateFields field) const;
+ #endif  // U_FORCE_HIDE_DEPRECATED_API
+ 
+     /**
+@@ -1082,7 +1082,7 @@ public:
+      * @return       The highest minimum value for the given time field.
+      * @stable ICU 2.6.
+      */
+-    U_I18N_API virtual int32_t getGreatestMinimum(UCalendarDateFields field) const;
++    virtual int32_t getGreatestMinimum(UCalendarDateFields field) const;
+ 
+ #ifndef U_FORCE_HIDE_DEPRECATED_API
+     /**
+@@ -1093,7 +1093,7 @@ public:
+      * @return       The lowest maximum value for the given time field.
+      * @deprecated ICU 2.6. Use getLeastMaximum(UCalendarDateFields field) instead.
+      */
+-    U_I18N_API virtual int32_t getLeastMaximum(EDateFields field) const;
++    virtual int32_t getLeastMaximum(EDateFields field) const;
+ #endif  // U_FORCE_HIDE_DEPRECATED_API
+ 
+     /**
+@@ -1104,7 +1104,7 @@ public:
+      * @return       The lowest maximum value for the given time field.
+      * @stable ICU 2.6.
+      */
+-    U_I18N_API virtual int32_t getLeastMaximum(UCalendarDateFields field) const;
++    virtual int32_t getLeastMaximum(UCalendarDateFields field) const;
+ 
+ #ifndef U_HIDE_DEPRECATED_API
+     /**
+@@ -1121,7 +1121,7 @@ public:
+      * @return         the minimum of the given field for the current date of this Calendar
+      * @deprecated ICU 2.6. Use getActualMinimum(UCalendarDateFields field, UErrorCode& status) instead.
+      */
+-    U_I18N_API int32_t getActualMinimum(EDateFields field, UErrorCode& status) const;
++    int32_t getActualMinimum(EDateFields field, UErrorCode& status) const;
+ #endif  /* U_HIDE_DEPRECATED_API */
+ 
+     /**
+@@ -1138,7 +1138,7 @@ public:
+      * @return         the minimum of the given field for the current date of this Calendar
+      * @stable ICU 2.6.
+      */
+-    U_I18N_API virtual int32_t getActualMinimum(UCalendarDateFields field, UErrorCode& status) const;
++    virtual int32_t getActualMinimum(UCalendarDateFields field, UErrorCode& status) const;
+ 
+     /**
+      * Return the maximum value that this field could have, given the current date.
+@@ -1156,7 +1156,7 @@ public:
+      * @return         the maximum of the given field for the current date of this Calendar
+      * @stable ICU 2.6.
+      */
+-    U_I18N_API virtual int32_t getActualMaximum(UCalendarDateFields field, UErrorCode& status) const;
++    virtual int32_t getActualMaximum(UCalendarDateFields field, UErrorCode& status) const;
+ 
+     /**
+      * Gets the value for a given time field. Recalculate the current time field values
+@@ -1171,7 +1171,7 @@ public:
+      *               and set() has been called for any other field.
+      * @stable ICU 2.6.
+      */
+-    U_I18N_API int32_t get(UCalendarDateFields field, UErrorCode& status) const;
++    int32_t get(UCalendarDateFields field, UErrorCode& status) const;
+ 
+     /**
+      * Determines if the given time field has a value set. This can affect in the
+@@ -1181,7 +1181,7 @@ public:
+      * @return   True if the given time field has a value set; false otherwise.
+      * @stable ICU 2.6.
+      */
+-    U_I18N_API UBool isSet(UCalendarDateFields field) const;
++    UBool isSet(UCalendarDateFields field) const;
+ 
+     /**
+      * Sets the given time field with the given value.
+@@ -1190,7 +1190,7 @@ public:
+      * @param value  The value to be set for the given time field.
+      * @stable ICU 2.6.
+      */
+-    U_I18N_API void set(UCalendarDateFields field, int32_t value);
++    void set(UCalendarDateFields field, int32_t value);
+ 
+     /**
+      * Sets the values for the fields YEAR, MONTH, and DATE. Other field values are
+@@ -1202,7 +1202,7 @@ public:
+      * @param date   The value used to set the DATE time field.
+      * @stable ICU 2.0
+      */
+-    U_I18N_API void set(int32_t year, int32_t month, int32_t date);
++    void set(int32_t year, int32_t month, int32_t date);
+ 
+     /**
+      * Sets the values for the fields YEAR, MONTH, DATE, HOUR_OF_DAY, and MINUTE. Other
+@@ -1216,7 +1216,7 @@ public:
+      * @param minute  The value used to set the MINUTE time field.
+      * @stable ICU 2.0
+      */
+-    U_I18N_API void set(int32_t year, int32_t month, int32_t date, int32_t hour, int32_t minute);
++    void set(int32_t year, int32_t month, int32_t date, int32_t hour, int32_t minute);
+ 
+     /**
+      * Sets the values for the fields YEAR, MONTH, DATE, HOUR_OF_DAY, MINUTE, and SECOND.
+@@ -1231,7 +1231,7 @@ public:
+      * @param second  The value used to set the SECOND time field.
+      * @stable ICU 2.0
+      */
+-    U_I18N_API void set(int32_t year, int32_t month, int32_t date,
++    void set(int32_t year, int32_t month, int32_t date,
+                         int32_t hour, int32_t minute, int32_t second);
+ 
+     /**
+@@ -1240,7 +1240,7 @@ public:
+      * resolving of time into time fields.
+      * @stable ICU 2.0
+      */
+-    U_I18N_API void clear();
++    void clear();
+ 
+     /**
+      * Clears the value in the given time field, both making it unset and assigning it a
+@@ -1251,7 +1251,7 @@ public:
+      * @param field  The time field to be cleared.
+      * @stable ICU 2.6.
+      */
+-    U_I18N_API void clear(UCalendarDateFields field);
++    void clear(UCalendarDateFields field);
+ 
+     /**
+      * Returns a unique class ID POLYMORPHICALLY. Pure virtual method. This method is to
+@@ -1268,7 +1268,7 @@ public:
+      *           same class ID. Objects of other classes have different class IDs.
+      * @stable ICU 2.0
+      */
+-    U_I18N_API virtual UClassID getDynamicClassID() const override = 0;
++    virtual UClassID getDynamicClassID() const override = 0;
+ 
+     /**
+      * Returns the calendar type name string for this Calendar object.
+@@ -1302,7 +1302,7 @@ public:
+      * @return legacy calendar type name string
+      * @stable ICU 49
+      */
+-    U_I18N_API virtual const char* getType() const = 0;
++    virtual const char* getType() const = 0;
+ 
+     /**
+      * Returns whether the given day of the week is a weekday, a weekend day,
+@@ -1320,7 +1320,7 @@ public:
+      * @return The UCalendarWeekdayType for the day of the week.
+      * @stable ICU 4.4
+      */
+-    U_I18N_API virtual UCalendarWeekdayType getDayOfWeekType(UCalendarDaysOfWeek dayOfWeek,
++    virtual UCalendarWeekdayType getDayOfWeekType(UCalendarDaysOfWeek dayOfWeek,
+                                                              UErrorCode& status) const;
+ 
+     /**
+@@ -1337,7 +1337,7 @@ public:
+      * @return The milliseconds after midnight at which the weekend begins or ends.
+      * @stable ICU 4.4
+      */
+-    U_I18N_API virtual int32_t getWeekendTransition(UCalendarDaysOfWeek dayOfWeek,
++    virtual int32_t getWeekendTransition(UCalendarDaysOfWeek dayOfWeek,
+                                                     UErrorCode& status) const;
+ 
+     /**
+@@ -1349,7 +1349,7 @@ public:
+      * this calendar system, false otherwise.
+      * @stable ICU 4.4
+      */
+-    U_I18N_API virtual UBool isWeekend(UDate date, UErrorCode& status) const;
++    virtual UBool isWeekend(UDate date, UErrorCode& status) const;
+ 
+     /**
+      * Returns true if this Calendar's current date-time is in the weekend in
+@@ -1358,7 +1358,7 @@ public:
+      * this calendar system, false otherwise.
+      * @stable ICU 4.4
+      */
+-    U_I18N_API virtual UBool isWeekend() const;
++    virtual UBool isWeekend() const;
+ 
+     /**
+      * Returns true if the date is in a leap year. Recalculate the current time
+@@ -1374,7 +1374,7 @@ public:
+      *               defined leap year. False otherwise.
+      * @stable ICU 73
+      */
+-    U_I18N_API virtual bool inTemporalLeapYear(UErrorCode& status) const;
++    virtual bool inTemporalLeapYear(UErrorCode& status) const;
+ 
+     /**
+      * Gets The Temporal monthCode value corresponding to the month for the date.
+@@ -1394,7 +1394,7 @@ public:
+      * @return       One of 25 possible strings in {"M01".."M13", "M01L".."M12L"}.
+      * @stable ICU 73
+      */
+-    U_I18N_API virtual const char* getTemporalMonthCode(UErrorCode& status) const;
++    virtual const char* getTemporalMonthCode(UErrorCode& status) const;
+ 
+     /**
+      * Sets The Temporal monthCode which is a string identifier that starts
+@@ -1415,7 +1415,7 @@ public:
+      *
+      * @stable ICU 73
+      */
+-    U_I18N_API virtual void setTemporalMonthCode(const char* temporalMonth, UErrorCode& status);
++    virtual void setTemporalMonthCode(const char* temporalMonth, UErrorCode& status);
+ 
+ protected:
+ 
+@@ -1427,7 +1427,7 @@ protected:
+       *                 U_ZERO_ERROR if constructed successfully.
+      * @stable ICU 2.0
+       */
+-    U_I18N_API Calendar(UErrorCode& success);
++    Calendar(UErrorCode& success);
+ 
+     /**
+      * Copy constructor
+@@ -1435,7 +1435,7 @@ protected:
+      * @param source    Calendar object to be copied from
+      * @stable ICU 2.0
+      */
+-    U_I18N_API Calendar(const Calendar& source);
++    Calendar(const Calendar& source);
+ 
+     /**
+      * Default assignment operator
+@@ -1443,7 +1443,7 @@ protected:
+      * @param right    Calendar object to be copied
+      * @stable ICU 2.0
+      */
+-    U_I18N_API Calendar& operator=(const Calendar& right);
++    Calendar& operator=(const Calendar& right);
+ 
+     /**
+      * Constructs a Calendar with the given time zone and locale. Clients are no longer
+@@ -1455,7 +1455,7 @@ protected:
+      *                 U_ZERO_ERROR if constructed successfully.
+      * @stable ICU 2.0
+      */
+-    U_I18N_API Calendar(TimeZone* zone, const Locale& aLocale, UErrorCode& success);
++    Calendar(TimeZone* zone, const Locale& aLocale, UErrorCode& success);
+ 
+     /**
+      * Constructs a Calendar with the given time zone and locale.
+@@ -1466,7 +1466,7 @@ protected:
+      *                 U_ZERO_ERROR if constructed successfully.
+      * @stable ICU 2.0
+      */
+-    U_I18N_API Calendar(const TimeZone& zone, const Locale& aLocale, UErrorCode& success);
++    Calendar(const TimeZone& zone, const Locale& aLocale, UErrorCode& success);
+ 
+     /**
+      * Converts Calendar's time field values to GMT as milliseconds.
+@@ -1476,7 +1476,7 @@ protected:
+      *                leniency, this will be set to an error status.
+      * @stable ICU 2.0
+      */
+-    U_I18N_API virtual void computeTime(UErrorCode& status);
++    virtual void computeTime(UErrorCode& status);
+ 
+     /**
+      * Converts GMT as milliseconds to time field values. This allows you to sync up the
+@@ -1489,7 +1489,7 @@ protected:
+      *                leniency, this will be set to an error status.
+      * @stable ICU 2.0
+      */
+-    U_I18N_API virtual void computeFields(UErrorCode& status);
++    virtual void computeFields(UErrorCode& status);
+ 
+     /**
+      * Gets this Calendar's current time as a long.
+@@ -1500,7 +1500,7 @@ protected:
+      * @return the current time as UTC milliseconds from the epoch.
+      * @stable ICU 2.0
+      */
+-    U_I18N_API double getTimeInMillis(UErrorCode& status) const;
++    double getTimeInMillis(UErrorCode& status) const;
+ 
+     /**
+      * Sets this Calendar's current time from the given long value.
+@@ -1510,7 +1510,7 @@ protected:
+      *                leniency, this will be set to an error status.
+      * @stable ICU 2.0
+      */
+-    U_I18N_API void setTimeInMillis(double millis, UErrorCode& status);
++    void setTimeInMillis(double millis, UErrorCode& status);
+ 
+     /**
+      * Recomputes the current time from currently set fields, and then fills in any
+@@ -1521,7 +1521,7 @@ protected:
+      *                leniency, this will be set to an error status.
+      * @stable ICU 2.0
+      */
+-    U_I18N_API void complete(UErrorCode& status);
++    void complete(UErrorCode& status);
+ 
+ #ifndef U_HIDE_DEPRECATED_API
+     /**
+@@ -1532,7 +1532,7 @@ protected:
+      * @return       The value for the given time field.
+      * @deprecated ICU 2.6. Use internalGet(UCalendarDateFields field) instead.
+      */
+-    U_I18N_API inline int32_t internalGet(EDateFields field) const { return fFields[field]; }
++    inline int32_t internalGet(EDateFields field) const { return fFields[field]; }
+ #endif  /* U_HIDE_DEPRECATED_API */
+ 
+ #ifndef U_HIDE_INTERNAL_API
+@@ -1546,7 +1546,7 @@ protected:
+      * @return       The value for the given time field.
+      * @internal
+      */
+-    U_I18N_API inline int32_t internalGet(UCalendarDateFields field, int32_t defaultValue) const {
++    inline int32_t internalGet(UCalendarDateFields field, int32_t defaultValue) const {
+         return fStamp[field] > kUnset ? fFields[field] : defaultValue;
+     }
+ 
+@@ -1558,21 +1558,21 @@ protected:
+      * @return       The value for the given time field.
+      * @internal
+      */
+-    U_I18N_API inline int32_t internalGet(UCalendarDateFields field) const { return fFields[field]; }
++    inline int32_t internalGet(UCalendarDateFields field) const { return fFields[field]; }
+ 
+     /**
+      * The year in this calendar is counting from 1 backward if the era is 0.
+      * @return The year in era 0 of this calendar is counting backward from 1.
+      * @internal
+      */
+-    U_I18N_API virtual bool isEra0CountingBackward() const { return false; }
++    virtual bool isEra0CountingBackward() const { return false; }
+ 
+     /**
+      * Related year difference.
+      * @return The difference in Related year.
+      * @internal
+      */
+-    U_I18N_API virtual int32_t getRelatedYearDifference() const;
++    virtual int32_t getRelatedYearDifference() const;
+ 
+ #endif  /* U_HIDE_INTERNAL_API */
+ 
+@@ -1585,7 +1585,7 @@ protected:
+      * @return       The value for the UCAL_MONTH.
+      * @internal
+      */
+-    U_I18N_API virtual int32_t internalGetMonth(UErrorCode& status) const;
++    virtual int32_t internalGetMonth(UErrorCode& status) const;
+ 
+     /**
+      * Use this function instead of internalGet(UCAL_MONTH, defaultValue). The implementation
+@@ -1600,7 +1600,7 @@ protected:
+      * @return       The value for the UCAL_MONTH.
+      * @internal
+      */
+-    U_I18N_API virtual int32_t internalGetMonth(int32_t defaultValue, UErrorCode& status) const;
++    virtual int32_t internalGetMonth(int32_t defaultValue, UErrorCode& status) const;
+ 
+ #ifndef U_HIDE_DEPRECATED_API
+     /**
+@@ -1612,7 +1612,7 @@ protected:
+      * @param value    The value for the given time field.
+      * @deprecated ICU 2.6. Use internalSet(UCalendarDateFields field, int32_t value) instead.
+      */
+-    U_I18N_API void internalSet(EDateFields field, int32_t value);
++    void internalSet(EDateFields field, int32_t value);
+ #endif  /* U_HIDE_DEPRECATED_API */
+ 
+     /**
+@@ -1624,7 +1624,7 @@ protected:
+      * @param value    The value for the given time field.
+      * @stable ICU 2.6.
+      */
+-    U_I18N_API inline void internalSet(UCalendarDateFields field, int32_t value);
++    inline void internalSet(UCalendarDateFields field, int32_t value);
+ 
+     /**
+      * Prepare this calendar for computing the actual minimum or maximum.
+@@ -1632,7 +1632,7 @@ protected:
+      * temporary calendar.
+      * @internal
+      */
+-    U_I18N_API virtual void prepareGetActual(UCalendarDateFields field,
++    virtual void prepareGetActual(UCalendarDateFields field,
+                                              UBool isMinimum,
+                                              UErrorCode& status);
+ 
+@@ -1671,7 +1671,7 @@ protected:
+      * <code>LEAST_MAXIMUM</code>, or <code>MAXIMUM</code>
+      * @internal
+      */
+-    U_I18N_API virtual int32_t handleGetLimit(UCalendarDateFields field, ELimitType limitType) const = 0;
++    virtual int32_t handleGetLimit(UCalendarDateFields field, ELimitType limitType) const = 0;
+ 
+     /**
+      * Return a limit for a field.
+@@ -1680,7 +1680,7 @@ protected:
+      * @see #ELimitType
+      * @internal
+      */
+-    U_I18N_API virtual int32_t getLimit(UCalendarDateFields field, ELimitType limitType) const;
++    virtual int32_t getLimit(UCalendarDateFields field, ELimitType limitType) const;
+ 
+     /**
+      * Return the Julian day number of day before the first day of the
+@@ -1697,7 +1697,7 @@ protected:
+      * day of the given month and year
+      * @internal
+      */
+-    U_I18N_API virtual int64_t handleComputeMonthStart(int32_t eyear,
++    virtual int64_t handleComputeMonthStart(int32_t eyear,
+                                                        int32_t month,
+                                                        UBool useMonth,
+                                                        UErrorCode& status) const = 0;
+@@ -1709,7 +1709,7 @@ protected:
+      * implementation than the default implementation in Calendar.
+      * @internal
+      */
+-    U_I18N_API virtual int32_t handleGetMonthLength(int32_t extendedYear,
++    virtual int32_t handleGetMonthLength(int32_t extendedYear,
+                                                     int32_t month,
+                                                     UErrorCode& status) const;
+ 
+@@ -1720,7 +1720,7 @@ protected:
+      * default implementation in Calendar.
+      * @internal
+      */
+-    U_I18N_API virtual int32_t handleGetYearLength(int32_t eyear, UErrorCode& status) const;
++    virtual int32_t handleGetYearLength(int32_t eyear, UErrorCode& status) const;
+ 
+     /**
+      * Return the extended year defined by the current fields.  This will
+@@ -1731,7 +1731,7 @@ protected:
+      * @return the extended year
+      * @internal
+      */
+-    U_I18N_API virtual int32_t handleGetExtendedYear(UErrorCode& status) = 0;
++    virtual int32_t handleGetExtendedYear(UErrorCode& status) = 0;
+ 
+     /**
+      * Subclasses may override this.  This method calls
+@@ -1742,7 +1742,7 @@ protected:
+      * @return julian day specified by calendar fields.
+      * @internal
+      */
+-    U_I18N_API virtual int32_t handleComputeJulianDay(UCalendarDateFields bestField, UErrorCode& status);
++    virtual int32_t handleComputeJulianDay(UCalendarDateFields bestField, UErrorCode& status);
+ 
+     /**
+      * Subclasses must override this to convert from week fields
+@@ -1752,7 +1752,7 @@ protected:
+      * @return the extended year, UCAL_EXTENDED_YEAR
+      * @internal
+      */
+-    U_I18N_API virtual int32_t handleGetExtendedYearFromWeekFields(int32_t yearWoy,
++    virtual int32_t handleGetExtendedYearFromWeekFields(int32_t yearWoy,
+                                                                    int32_t woy,
+                                                                    UErrorCode& status);
+ 
+@@ -1762,7 +1762,7 @@ protected:
+      * Generic fields can be handled by `Calendar::validateField()`.
+      * @internal
+      */
+-    U_I18N_API virtual void validateField(UCalendarDateFields field, UErrorCode& status);
++    virtual void validateField(UCalendarDateFields field, UErrorCode& status);
+ 
+ #ifndef U_HIDE_INTERNAL_API
+     /**
+@@ -1772,7 +1772,7 @@ protected:
+      * @return the julian day
+      * @internal
+      */
+-    U_I18N_API int32_t computeJulianDay(UErrorCode& status);
++    int32_t computeJulianDay(UErrorCode& status);
+ 
+     /**
+      * Compute the milliseconds in the day from the fields.  This is a
+@@ -1781,7 +1781,7 @@ protected:
+      * reflects local zone wall time.
+      * @internal
+      */
+-    U_I18N_API double computeMillisInDay();
++    double computeMillisInDay();
+ 
+     /**
+      * This method can assume EXTENDED_YEAR has been set.
+@@ -1792,7 +1792,7 @@ protected:
+      *          when this function fails.
+      * @internal
+      */
+-    U_I18N_API int32_t computeZoneOffset(double millis, double millisInDay, UErrorCode& ec);
++    int32_t computeZoneOffset(double millis, double millisInDay, UErrorCode& ec);
+ 
+     /**
+      * Determine the best stamp in a range.
+@@ -1802,7 +1802,7 @@ protected:
+      * @return the stamp value of the best stamp
+      * @internal
+      */
+-    U_I18N_API int32_t newestStamp(UCalendarDateFields start,
++    int32_t newestStamp(UCalendarDateFields start,
+                                    UCalendarDateFields end,
+                                    int32_t bestSoFar) const;
+ 
+@@ -1812,7 +1812,7 @@ protected:
+      * @see #resolveFields
+      * @internal
+      */
+-    U_I18N_API static constexpr int32_t kResolveSTOP = -1;
++    static constexpr int32_t kResolveSTOP = -1;
+ 
+     /**
+      * Value to be bitwised "ORed" against resolve table field values for remapping.
+@@ -1823,35 +1823,35 @@ protected:
+      * @see #resolveFields
+      * @internal
+      */
+-    U_I18N_API static constexpr int32_t kResolveRemap = 32;
++    static constexpr int32_t kResolveRemap = 32;
+ 
+     /**
+      * Precedence table for Dates
+      * @see #resolveFields
+      * @internal
+      */
+-    U_I18N_API static const UFieldResolutionTable kDatePrecedence[];
++    static const UFieldResolutionTable kDatePrecedence[];
+ 
+     /**
+      * Precedence table for Year
+      * @see #resolveFields
+      * @internal
+      */
+-    U_I18N_API static const UFieldResolutionTable kYearPrecedence[];
++    static const UFieldResolutionTable kYearPrecedence[];
+ 
+     /**
+      * Precedence table for Day of Week
+      * @see #resolveFields
+      * @internal
+      */
+-    U_I18N_API static const UFieldResolutionTable kDOWPrecedence[];
++    static const UFieldResolutionTable kDOWPrecedence[];
+ 
+     /**
+      * Precedence table for Months
+      * @see #resolveFields
+      * @internal
+      */
+-    U_I18N_API static const UFieldResolutionTable kMonthPrecedence[];
++    static const UFieldResolutionTable kMonthPrecedence[];
+ 
+     /**
+      * Given a precedence table, return the newest field combination in
+@@ -1880,13 +1880,13 @@ protected:
+      * match, then UCAL_FIELD_COUNT is returned.
+      * @internal
+      */
+-    U_I18N_API UCalendarDateFields resolveFields(const UFieldResolutionTable* precedenceTable) const;
++    UCalendarDateFields resolveFields(const UFieldResolutionTable* precedenceTable) const;
+ #endif  /* U_HIDE_INTERNAL_API */
+ 
+     /**
+      * @internal
+      */
+-    U_I18N_API virtual const UFieldResolutionTable* getFieldResolutionTable() const;
++    virtual const UFieldResolutionTable* getFieldResolutionTable() const;
+ 
+ #ifndef U_HIDE_INTERNAL_API
+     /**
+@@ -1894,7 +1894,7 @@ protected:
+      * alternateField.  If neither is newer or neither is set, return defaultField.
+      * @internal
+      */
+-    U_I18N_API UCalendarDateFields newerField(UCalendarDateFields defaultField,
++    UCalendarDateFields newerField(UCalendarDateFields defaultField,
+                                               UCalendarDateFields alternateField) const;
+ #endif  /* U_HIDE_INTERNAL_API */
+ 
+@@ -1916,7 +1916,7 @@ protected:
+      * @return     the current time without recomputing.
+      * @stable ICU 2.0
+      */
+-    U_I18N_API UDate internalGetTime() const { return fTime; }
++    UDate internalGetTime() const { return fTime; }
+ 
+     /**
+      * Set the current time without affecting flags or fields.
+@@ -1925,7 +1925,7 @@ protected:
+      * @return        the current time without recomputing.
+      * @stable ICU 2.0
+      */
+-    U_I18N_API void internalSetTime(UDate time) { fTime = time; }
++    void internalSetTime(UDate time) { fTime = time; }
+ 
+     /**
+      * The time fields containing values into which the millis is computed.
+@@ -1976,7 +1976,7 @@ protected:
+      * a pure proleptic Gregorian calendar.
+      * @internal
+      */
+-  U_I18N_API virtual void handleComputeFields(int32_t julianDay, UErrorCode& status);
++  virtual void handleComputeFields(int32_t julianDay, UErrorCode& status);
+ 
+ #ifndef U_HIDE_INTERNAL_API
+     /**
+@@ -1984,7 +1984,7 @@ protected:
+      * <code>computeGregorianFields()</code>.
+      * @internal
+      */
+-    U_I18N_API int32_t getGregorianYear() const {
++    int32_t getGregorianYear() const {
+         return fGregorianYear;
+     }
+ 
+@@ -1993,7 +1993,7 @@ protected:
+      * <code>computeGregorianFields()</code>.
+      * @internal
+      */
+-    U_I18N_API int32_t getGregorianMonth() const {
++    int32_t getGregorianMonth() const {
+         return fGregorianMonth;
+     }
+ 
+@@ -2002,7 +2002,7 @@ protected:
+      * computed by <code>computeGregorianFields()</code>.
+      * @internal
+      */
+-    U_I18N_API int32_t getGregorianDayOfYear() const {
++    int32_t getGregorianDayOfYear() const {
+         return fGregorianDayOfYear;
+     }
+ 
+@@ -2011,7 +2011,7 @@ protected:
+      * computed by <code>computeGregorianFields()</code>.
+      * @internal
+      */
+-    U_I18N_API int32_t getGregorianDayOfMonth() const {
++    int32_t getGregorianDayOfMonth() const {
+       return fGregorianDayOfMonth;
+     }
+ #endif  /* U_HIDE_INTERNAL_API */
+@@ -2024,7 +2024,7 @@ protected:
+      *          when this function fails.
+      * @internal
+      */
+-    U_I18N_API virtual int32_t getDefaultMonthInYear(int32_t eyear, UErrorCode& status);
++    virtual int32_t getDefaultMonthInYear(int32_t eyear, UErrorCode& status);
+ 
+     /**
+      * Called by computeJulianDay.  Returns the default day (1-based) for the month,
+@@ -2035,7 +2035,7 @@ protected:
+      *          when this function fails.
+      * @internal
+      */
+-    U_I18N_API virtual int32_t getDefaultDayInMonth(int32_t eyear, int32_t month, UErrorCode& status);
++    virtual int32_t getDefaultDayInMonth(int32_t eyear, int32_t month, UErrorCode& status);
+ 
+     //-------------------------------------------------------------------------
+     // Protected utility methods for use by subclasses.  These are very handy
+@@ -2071,7 +2071,7 @@ protected:
+      * @see #getActualMaximum
+      * @stable ICU 2.0
+      */
+-    U_I18N_API virtual void pinField(UCalendarDateFields field, UErrorCode& status);
++    virtual void pinField(UCalendarDateFields field, UErrorCode& status);
+ 
+     /**
+      * Return the week number of a day, within a period. This may be the week number in
+@@ -2116,7 +2116,7 @@ protected:
+      *
+      * @stable ICU 2.8
+      */
+-    U_I18N_API int32_t weekNumber(int32_t desiredDay, int32_t dayOfPeriod, int32_t dayOfWeek);
++    int32_t weekNumber(int32_t desiredDay, int32_t dayOfPeriod, int32_t dayOfWeek);
+ 
+ #ifndef U_HIDE_INTERNAL_API
+     /**
+@@ -2149,13 +2149,13 @@ protected:
+      *              is more than one.
+      * @internal
+      */
+-    U_I18N_API inline int32_t weekNumber(int32_t dayOfPeriod, int32_t dayOfWeek);
++    inline int32_t weekNumber(int32_t dayOfPeriod, int32_t dayOfWeek);
+ 
+     /**
+      * returns the local DOW, valid range 0..6
+      * @internal
+      */
+-    U_I18N_API int32_t getLocalDOW(UErrorCode& status);
++    int32_t getLocalDOW(UErrorCode& status);
+ #endif  /* U_HIDE_INTERNAL_API */
+ 
+ private:
+@@ -2309,7 +2309,7 @@ protected:
+      * subclasses that are Gregorian derivatives.  Subclasses may call this
+      * method to perform a Gregorian calendar millis->fields computation.
+      */
+-    U_I18N_API void computeGregorianFields(int32_t julianDay, UErrorCode& ec);
++    void computeGregorianFields(int32_t julianDay, UErrorCode& ec);
+ 
+ private:
+ 
+@@ -2365,7 +2365,7 @@ private:
+      * @return   Day number from 1..7 (SUN..SAT).
+      * @internal
+      */
+-    U_I18N_API static uint8_t julianDayToDayOfWeek(int32_t julian);
++    static uint8_t julianDayToDayOfWeek(int32_t julian);
+ #endif  /* U_HIDE_INTERNAL_API */
+ 
+  private:
+@@ -2385,7 +2385,7 @@ private:
+      * @return a StringEnumeration over the locales available at the time of the call
+      * @internal
+      */
+-    U_I18N_API static StringEnumeration* getAvailableLocales();
++    static StringEnumeration* getAvailableLocales();
+ 
+     /**
+      * Register a new Calendar factory.  The factory will be adopted.
+@@ -2400,7 +2400,7 @@ private:
+      * @return a registry key that can be used to unregister this factory
+      * @internal
+      */
+-    U_I18N_API static URegistryKey registerFactory(ICUServiceFactory* toAdopt, UErrorCode& status);
++    static URegistryKey registerFactory(ICUServiceFactory* toAdopt, UErrorCode& status);
+ 
+     /**
+      * Unregister a previously-registered CalendarFactory using the key returned from the
+@@ -2417,7 +2417,7 @@ private:
+      * @return true if the factory for the key was successfully unregistered
+      * @internal
+      */
+-    U_I18N_API static UBool unregister(URegistryKey key, UErrorCode& status);
++    static UBool unregister(URegistryKey key, UErrorCode& status);
+ #endif  /* U_HIDE_INTERNAL_API */
+ 
+     /**
+@@ -2443,19 +2443,19 @@ private:
+      * @return true if this calendar has a default century (i.e. 03 -> 2003)
+      * @internal
+      */
+-    U_I18N_API virtual UBool haveDefaultCentury() const = 0;
++    virtual UBool haveDefaultCentury() const = 0;
+ 
+     /**
+      * @return the start of the default century, as a UDate
+      * @internal
+      */
+-    U_I18N_API virtual UDate defaultCenturyStart() const = 0;
++    virtual UDate defaultCenturyStart() const = 0;
+ 
+     /**
+      * @return the beginning year of the default century, as a year
+      * @internal
+      */
+-    U_I18N_API virtual int32_t defaultCenturyStartYear() const = 0;
++    virtual int32_t defaultCenturyStartYear() const = 0;
+ 
+     /** Get the locale for this calendar object. You can choose between valid and actual locale.
+      *  @param type type of the locale we're looking for (valid or actual)
+@@ -2463,21 +2463,21 @@ private:
+      *  @return the locale
+      *  @stable ICU 2.8
+      */
+-    U_I18N_API Locale getLocale(ULocDataLocaleType type, UErrorCode& status) const;
++    Locale getLocale(ULocDataLocaleType type, UErrorCode& status) const;
+ 
+     /**
+      * @return      The related Gregorian year; will be obtained by modifying the value
+      *              obtained by get from UCAL_EXTENDED_YEAR field
+      * @internal
+      */
+-    U_I18N_API virtual int32_t getRelatedYear(UErrorCode& status) const;
++    virtual int32_t getRelatedYear(UErrorCode& status) const;
+ 
+     /**
+      * @param year  The related Gregorian year to set; will be modified as necessary then
+      *              set in UCAL_EXTENDED_YEAR field
+      * @internal
+      */
+-    U_I18N_API virtual void setRelatedYear(int32_t year);
++    virtual void setRelatedYear(int32_t year);
+ 
+ #ifndef U_HIDE_INTERNAL_API
+     /** Get the locale for this calendar object. You can choose between valid and actual locale.
+@@ -2486,7 +2486,7 @@ private:
+      *  @return the locale
+      *  @internal
+      */
+-    U_I18N_API const char* getLocaleID(ULocDataLocaleType type, UErrorCode& status) const;
++    const char* getLocaleID(ULocDataLocaleType type, UErrorCode& status) const;
+ #endif  /* U_HIDE_INTERNAL_API */
+ 
+ private:
+@@ -2515,7 +2515,7 @@ public:
+      * @return the new Calendar object with no time or timezone set.
+      * @internal For ICU use only.
+      */
+-    U_I18N_API static Calendar* U_EXPORT2 makeInstance(const Locale& locale, UErrorCode& status);
++    static Calendar* U_EXPORT2 makeInstance(const Locale& locale, UErrorCode& status);
+ 
+     /**
+      * Get the calendar type for given locale.
+@@ -2527,7 +2527,7 @@ public:
+      * @param status error, if any, returned here.
+      * @internal For ICU use only.
+      */
+-    U_I18N_API static void U_EXPORT2 getCalendarTypeFromLocale(const Locale& locale,
++    static void U_EXPORT2 getCalendarTypeFromLocale(const Locale& locale,
+                                                                char* typeBuffer,
+                                                                int32_t typeBufferSize,
+                                                                UErrorCode& status);
+diff --git a/source/i18n/unicode/format.h b/source/i18n/unicode/format.h
+index fcfd72c..25a2144 100644
+--- a/source/i18n/unicode/format.h
++++ b/source/i18n/unicode/format.h
+@@ -95,13 +95,13 @@ U_NAMESPACE_BEGIN
+  * subclasses, such code will not necessarily work and will not be
+  * guaranteed to work stably from release to release.
+  */
+-class U_I18N_API_CLASS Format : public UObject {
++class U_I18N_API Format : public UObject {
+ public:
+ 
+     /** Destructor
+      * @stable ICU 2.4
+      */
+-    U_I18N_API virtual ~Format();
++    virtual ~Format();
+ 
+     /**
+      * Return true if the given Format objects are semantically equal.
+@@ -111,7 +111,7 @@ public:
+      *                 Objects of different subclasses are considered unequal.
+      * @stable ICU 2.0
+      */
+-    U_I18N_API virtual bool operator==(const Format& other) const = 0;
++    virtual bool operator==(const Format& other) const = 0;
+ 
+     /**
+      * Return true if the given Format objects are not semantically
+@@ -120,7 +120,7 @@ public:
+      * @return         Return true if the given Format objects are not semantically.
+      * @stable ICU 2.0
+      */
+-    U_I18N_API bool operator!=(const Format& other) const { return !operator==(other); }
++    bool operator!=(const Format& other) const { return !operator==(other); }
+ 
+     /**
+      * Clone this object polymorphically.  The caller is responsible
+@@ -128,7 +128,7 @@ public:
+      * @return    A copy of the object
+      * @stable ICU 2.0
+      */
+-    U_I18N_API virtual Format* clone() const = 0;
++    virtual Format* clone() const = 0;
+ 
+     /**
+      * Formats an object to produce a string.
+@@ -140,7 +140,7 @@ public:
+      * @return          Reference to 'appendTo' parameter.
+      * @stable ICU 2.0
+      */
+-    U_I18N_API UnicodeString& format(const Formattable& obj,
++    UnicodeString& format(const Formattable& obj,
+                                      UnicodeString& appendTo,
+                                      UErrorCode& status) const;
+ 
+@@ -160,7 +160,7 @@ public:
+      * @return          Reference to 'appendTo' parameter.
+      * @stable ICU 2.0
+      */
+-    U_I18N_API virtual UnicodeString& format(const Formattable& obj,
++    virtual UnicodeString& format(const Formattable& obj,
+                                              UnicodeString& appendTo,
+                                              FieldPosition& pos,
+                                              UErrorCode& status) const = 0;
+@@ -181,7 +181,7 @@ public:
+      * @return          Reference to 'appendTo' parameter.
+      * @stable ICU 4.4
+      */
+-    U_I18N_API virtual UnicodeString& format(const Formattable& obj,
++    virtual UnicodeString& format(const Formattable& obj,
+                                              UnicodeString& appendTo,
+                                              FieldPositionIterator* posIter,
+                                              UErrorCode& status) const;
+@@ -225,7 +225,7 @@ public:
+      *                  will remain unchanged.
+      * @stable ICU 2.0
+      */
+-    U_I18N_API virtual void parseObject(const UnicodeString& source,
++    virtual void parseObject(const UnicodeString& source,
+                                         Formattable& result,
+                                         ParsePosition& parse_pos) const = 0;
+ 
+@@ -241,7 +241,7 @@ public:
+      *                  result code.
+      * @stable ICU 2.0
+      */
+-    U_I18N_API void parseObject(const UnicodeString& source,
++    void parseObject(const UnicodeString& source,
+                                 Formattable& result,
+                                 UErrorCode& status) const;
+ 
+@@ -251,7 +251,7 @@ public:
+      *  @return the locale
+      *  @stable ICU 2.8
+      */
+-    U_I18N_API Locale getLocale(ULocDataLocaleType type, UErrorCode& status) const;
++    Locale getLocale(ULocDataLocaleType type, UErrorCode& status) const;
+ 
+ #ifndef U_HIDE_INTERNAL_API
+     /** Get the locale for this format object. You can choose between valid and actual locale.
+@@ -260,29 +260,29 @@ public:
+      *  @return the locale
+      *  @internal
+      */
+-    U_I18N_API const char* getLocaleID(ULocDataLocaleType type, UErrorCode& status) const;
++    const char* getLocaleID(ULocDataLocaleType type, UErrorCode& status) const;
+ #endif  /* U_HIDE_INTERNAL_API */
+ 
+  protected:
+     /** @stable ICU 2.8 */
+-    U_I18N_API void setLocaleIDs(const char* valid, const char* actual);
++    void setLocaleIDs(const char* valid, const char* actual);
+ 
+ protected:
+     /**
+      * Default constructor for subclass use only.  Does nothing.
+      * @stable ICU 2.0
+      */
+-    U_I18N_API Format();
++    Format();
+ 
+     /**
+      * @stable ICU 2.0
+      */
+-    U_I18N_API Format(const Format&); // Does nothing; for subclasses only
++    Format(const Format&); // Does nothing; for subclasses only
+ 
+     /**
+      * @stable ICU 2.0
+      */
+-    U_I18N_API Format& operator=(const Format&); // Does nothing; for subclasses
++    Format& operator=(const Format&); // Does nothing; for subclasses
+ 
+     /**
+      * Simple function for initializing a UParseError from a UnicodeString.
+@@ -292,7 +292,7 @@ protected:
+      * @param parseError The UParseError object to fill in
+      * @stable ICU 2.4
+      */
+-    U_I18N_API static void syntaxError(const UnicodeString& pattern,
++    static void syntaxError(const UnicodeString& pattern,
+                                        int32_t pos,
+                                        UParseError& parseError);
+ 
