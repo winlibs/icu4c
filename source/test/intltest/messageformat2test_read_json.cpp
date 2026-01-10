@@ -2,6 +2,8 @@
 
 #include "unicode/utypes.h"
 
+#if !UCONFIG_NO_NORMALIZATION
+
 #if !UCONFIG_NO_FORMATTING
 
 #if !UCONFIG_NO_MF2
@@ -300,6 +302,10 @@ void TestMessageFormat2::jsonTestsFromFiles(IcuTestErrorCode& errorCode) {
     // Do valid spec tests
     runTestsFromJsonFile(*this, "spec/syntax.json", errorCode);
 
+    // Uncomment when test functions are implemented in the registry
+    // See https://unicode-org.atlassian.net/browse/ICU-22907
+    // runTestsFromJsonFile(*this, "spec/pattern-selection.json", errorCode);
+
     // Do valid function tests
     runTestsFromJsonFile(*this, "spec/functions/date.json", errorCode);
     runTestsFromJsonFile(*this, "spec/functions/datetime.json", errorCode);
@@ -309,12 +315,19 @@ void TestMessageFormat2::jsonTestsFromFiles(IcuTestErrorCode& errorCode) {
     runTestsFromJsonFile(*this, "spec/functions/time.json", errorCode);
 
     // Other tests (non-spec)
+    // TODO: Delete this file after https://github.com/unicode-org/message-format-wg/pull/904
+    // lands and the tests here are updated from the spec repo
+    runTestsFromJsonFile(*this, "normalization.json", errorCode);
+    // TODO: https://github.com/unicode-org/message-format-wg/pull/902 will
+    // move the bidi tests into the spec
+    runTestsFromJsonFile(*this, "bidi.json", errorCode);
     runTestsFromJsonFile(*this, "more-functions.json", errorCode);
     runTestsFromJsonFile(*this, "valid-tests.json", errorCode);
     runTestsFromJsonFile(*this, "resolution-errors.json", errorCode);
     runTestsFromJsonFile(*this, "matches-whitespace.json", errorCode);
     runTestsFromJsonFile(*this, "alias-selector-annotations.json", errorCode);
     runTestsFromJsonFile(*this, "runtime-errors.json", errorCode);
+    runTestsFromJsonFile(*this, "more-syntax-errors.json", errorCode);
 
     // Re: the expected output for the first test in this file:
     // Note: the more "correct" fallback output seems like it should be "1.000 3" (ignoring the
@@ -358,3 +371,5 @@ void TestMessageFormat2::jsonTestsFromFiles(IcuTestErrorCode& errorCode) {
 #endif /* #if !UCONFIG_NO_MF2 */
 
 #endif /* #if !UCONFIG_NO_FORMATTING */
+
+#endif /* #if !UCONFIG_NO_NORMALIZATION */

@@ -183,6 +183,7 @@ void CalendarTest::runIndexedTest( int32_t index, UBool exec, const char* &name,
     TESTCASE_AUTO(TestCalendarRollOrdinalMonth);
     TESTCASE_AUTO(TestLimitsOrdinalMonth);
     TESTCASE_AUTO(TestActualLimitsOrdinalMonth);
+    TESTCASE_AUTO(TestMaxActualLimitsWithoutGet23006);
     TESTCASE_AUTO(TestChineseCalendarMonthInSpecialYear);
     TESTCASE_AUTO(TestClearMonth);
 
@@ -192,6 +193,8 @@ void CalendarTest::runIndexedTest( int32_t index, UBool exec, const char* &name,
     TESTCASE_AUTO(TestFirstDayOfWeek);
 
     TESTCASE_AUTO(Test22633ChineseOverflow);
+    TESTCASE_AUTO(Test22962ChineseOverflow);
+    TESTCASE_AUTO(Test22962BuddhistOverflow);
     TESTCASE_AUTO(Test22633IndianOverflow);
     TESTCASE_AUTO(Test22633IslamicUmalquraOverflow);
     TESTCASE_AUTO(Test22633PersianOverflow);
@@ -207,12 +210,14 @@ void CalendarTest::runIndexedTest( int32_t index, UBool exec, const char* &name,
     TESTCASE_AUTO(Test22633HebrewLargeNegativeDay);
     TESTCASE_AUTO(Test22730JapaneseOverflow);
     TESTCASE_AUTO(Test22730CopticOverflow);
+    TESTCASE_AUTO(Test22962ComputeJulianDayOverflow);
 
     TESTCASE_AUTO(TestAddOverflow);
 
     TESTCASE_AUTO(Test22750Roll);
 
     TESTCASE_AUTO(TestChineseCalendarComputeMonthStart);
+    TESTCASE_AUTO(Test22962MonthAddOneOverflow);
 
     TESTCASE_AUTO_END;
 }
@@ -3918,7 +3923,7 @@ void CalendarTest::TestClearMonth() {
     if (failure(status, "Calendar::get(UCAL_MONTH)")) return;
     cal->clear(UCAL_MONTH);
     assertEquals("Calendar::isSet(UCAL_MONTH) after clear(UCAL_MONTH)", false, !!cal->isSet(UCAL_MONTH));
-    assertEquals("Calendar::get(UCAL_MONTH after clear(UCAL_MONTH))", UCAL_JANUARY, !!cal->get(UCAL_MONTH, status));
+    assertEquals("Calendar::get(UCAL_MONTH after clear(UCAL_MONTH))", UCAL_JANUARY, cal->get(UCAL_MONTH, status));
     if (failure(status, "Calendar::get(UCAL_MONTH)")) return;
 
     cal->set(UCAL_ORDINAL_MONTH, 7);
@@ -5351,6 +5356,30 @@ void CalendarTest::TestLimitsOrdinalMonth() {
     }
 }
 
+void CalendarTest::TestMaxActualLimitsWithoutGet23006() {
+    UErrorCode status = U_ZERO_ERROR;
+    GregorianCalendar gc(status);
+    gc.set(2025, UCAL_AUGUST, 8);
+    LocalPointer<Calendar> cal(Calendar::createInstance(Locale("en@calendar=chinese"), status), status);
+    cal->setTime(gc.getTime(status), status);
+    int32_t beforeCallingGet = cal->getActualMaximum(UCAL_DAY_OF_MONTH, status);
+    cal->get(UCAL_DAY_OF_MONTH, status);
+    int32_t afterCallingGet = cal->getActualMaximum(UCAL_DAY_OF_MONTH, status);
+    assertEquals("getActualMaximum() should return same value before/after calling get()",
+                 beforeCallingGet, afterCallingGet);
+    assertEquals("getActualMaximum() should return 29 before calling get()",
+                 29, beforeCallingGet);
+
+    gc.set(2026, UCAL_AUGUST, 8);
+    cal->setTime(gc.getTime(status), status);
+    beforeCallingGet = cal->getActualMaximum(UCAL_DAY_OF_MONTH, status);
+    cal->get(UCAL_DAY_OF_MONTH, status);
+    afterCallingGet = cal->getActualMaximum(UCAL_DAY_OF_MONTH, status);
+    assertEquals("getActualMaximum() should return same value before/after calling get()",
+                 beforeCallingGet, afterCallingGet);
+    assertEquals("getActualMaximum() should return 29 before calling get()",
+                 30, beforeCallingGet);
+}
 void CalendarTest::TestActualLimitsOrdinalMonth() {
     UErrorCode status = U_ZERO_ERROR;
     GregorianCalendar gc(status);
@@ -5566,7 +5595,6 @@ void CalendarTest::TestRollWeekOfYear() {
     cal->set(UCAL_MONTH, UCAL_JANUARY);
     cal->set(UCAL_DATE, 1);
     cal->roll(UCAL_WEEK_OF_YEAR, 0x7fffff, status);
-    U_ASSERT(U_SUCCESS(status));
     cal->roll(UCAL_WEEK_OF_YEAR, 1, status);
 }
 
@@ -5662,6 +5690,30 @@ void CalendarTest::Test22633ChineseOverflow() {
     cal->add(UCAL_YEAR, 1935762034, status);
     assertTrue("Should return falure", U_FAILURE(status));
 }
+
+void CalendarTest::Test22962BuddhistOverflow() {
+    UErrorCode status = U_ZERO_ERROR;
+    LocalPointer<Calendar> cal(Calendar::createInstance(Locale("en@calendar=uddhist"), status), status);
+    U_ASSERT(U_SUCCESS(status));
+    cal->clear();
+    cal->set(UCAL_WEEK_OF_YEAR, 1666136);
+    cal->set(UCAL_YEAR, -1887379272);
+    cal->fieldDifference(
+        261830011167902373443927125260580558779842815957727840993886210772873194951140935848493861585917165011373697198856398176256.000000,
+        UCAL_YEAR_WOY, status);
+    assertTrue("Should return falure", U_FAILURE(status));
+}
+
+void CalendarTest::Test22962ChineseOverflow() {
+    UErrorCode status = U_ZERO_ERROR;
+    LocalPointer<Calendar> cal(Calendar::createInstance(Locale("en@calendar=chinese"), status), status);
+    U_ASSERT(U_SUCCESS(status));
+    cal->add(UCAL_DAY_OF_WEEK_IN_MONTH, 1661092210, status);
+    cal->add(UCAL_MINUTE, -1330638081, status);
+    cal->add(UCAL_MONTH, 643194, status);
+    assertTrue("Should return falure", U_FAILURE(status));
+}
+
 void CalendarTest::Test22633IndianOverflow() {
     UErrorCode status = U_ZERO_ERROR;
     LocalPointer<Calendar> cal(Calendar::createInstance(Locale("en@calendar=indian"), status), status);
@@ -5898,6 +5950,17 @@ void CalendarTest::Test22730CopticOverflow() {
     assertEquals("status return without overflow", status, U_ILLEGAL_ARGUMENT_ERROR);
 }
 
+void CalendarTest::Test22962ComputeJulianDayOverflow() {
+    UErrorCode status = U_ZERO_ERROR;
+    LocalPointer<Calendar> calendar(
+        Calendar::createInstance(Locale("nds-NL-u-ca-islamic-umalqura"), status),
+        status);
+    calendar->clear();
+    calendar->set(UCAL_YEAR, -2147483648);
+    calendar->set(UCAL_WEEK_OF_YEAR, 33816240);
+    calendar->get(UCAL_ERA, status);
+    assertEquals("status return without overflow", status, U_ILLEGAL_ARGUMENT_ERROR);
+}
 void CalendarTest::TestAddOverflow() {
     UErrorCode status = U_ZERO_ERROR;
 
@@ -5941,6 +6004,21 @@ void CalendarTest::TestAddOverflow() {
     }
 }
 
+void CalendarTest::Test22962MonthAddOneOverflow() {
+    Locale locale("ckb_IQ@calendar=ethiopic-amete-alem");
+    UErrorCode status = U_ZERO_ERROR;
+    LocalPointer<Calendar> cal(Calendar::createInstance(
+            *TimeZone::getGMT(), locale, status));
+    cal->clear();
+    status = U_ZERO_ERROR;
+    cal->fieldDifference(
+        (double)115177509667085876226560460721710683457425563915331054206329829993967720136006086546037257220523631494518538798239249720325557586193565921621016454170342731307548672.0,
+        UCAL_MONTH, status);
+    status = U_ZERO_ERROR;
+    cal->set(UCAL_DAY_OF_WEEK_IN_MONTH , -2111799174);
+    cal->add(UCAL_ERA, -1426056846, status);
+    assertTrue("Should return failure", U_FAILURE(status));
+}
 void CalendarTest::Test22750Roll() {
     UErrorCode status = U_ZERO_ERROR;
     Locale l(Locale::getRoot());

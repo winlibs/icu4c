@@ -6,6 +6,8 @@
 
 #include "unicode/utypes.h"
 
+#if !UCONFIG_NO_NORMALIZATION
+
 #if !UCONFIG_NO_FORMATTING
 
 #if !UCONFIG_NO_MF2
@@ -252,7 +254,8 @@ class TestUtils {
         if (!roundTrip(in, mf.getDataModel(), out)
             // For now, don't round-trip messages with these errors,
             // since duplicate options are dropped
-            && testCase.expectedErrorCode() != U_MF_DUPLICATE_OPTION_NAME_ERROR) {
+            && (testCase.expectSuccess() ||
+                (testCase.expectedErrorCode() != U_MF_DUPLICATE_OPTION_NAME_ERROR))) {
             failRoundTrip(tmsg, testCase, in, out);
         }
 
@@ -291,10 +294,10 @@ class TestUtils {
             }
             // Re-run the formatter
             result = mf.formatToString(MessageArguments(testCase.getArguments(), errorCode), errorCode);
-            if (!testCase.outputMatches(result)) {
-                failWrongOutput(tmsg, testCase, result);
-                return;
-            }
+        }
+        if (!testCase.outputMatches(result)) {
+            failWrongOutput(tmsg, testCase, result);
+            return;
         }
         errorCode.reset();
     }
@@ -343,5 +346,7 @@ U_NAMESPACE_END
 #endif /* #if !UCONFIG_NO_MF2 */
 
 #endif /* #if !UCONFIG_NO_FORMATTING */
+
+#endif /* #if !UCONFIG_NO_NORMALIZATION */
 
 #endif

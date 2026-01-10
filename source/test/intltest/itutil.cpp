@@ -35,6 +35,10 @@
 #include "usettest.h"
 
 extern IntlTest *createBytesTrieTest();
+#if !UCONFIG_NO_COLLATION
+extern IntlTest *createUColHeaderOnlyTest();
+#endif
+extern IntlTest *createUSetHeaderOnlyTest();
 extern IntlTest *createLocaleMatcherTest();
 static IntlTest *createLocalPointerTest();
 extern IntlTest *createUCharsTrieTest();
@@ -82,6 +86,10 @@ void IntlTestUtilities::runIndexedTest( int32_t index, UBool exec, const char* &
     TESTCASE_AUTO_CLASS(LocaleBuilderTest);
     TESTCASE_AUTO_CREATE_CLASS(LocaleMatcherTest);
     TESTCASE_AUTO_CREATE_CLASS(UHashTest);
+#if !UCONFIG_NO_COLLATION
+    TESTCASE_AUTO_CREATE_CLASS(UColHeaderOnlyTest);
+#endif
+    TESTCASE_AUTO_CREATE_CLASS(USetHeaderOnlyTest);
     TESTCASE_AUTO_END;
 }
 
@@ -204,19 +212,19 @@ void ErrorCodeTest::TestSubclass() {
 
 class IcuTestErrorCodeTestHelper : public IntlTest {
   public:
-    void errln( const UnicodeString &message ) override {
+    void errln(std::u16string_view message) override {
         test->assertFalse("Already saw an error", seenError);
         seenError = true;
-        test->assertEquals("Message for Error", expectedErrln, message);
+        test->assertEquals("Message for Error", std::u16string_view{expectedErrln}, message);
         if (expectedDataErr) {
             test->errln("Got non-data error, but expected data error");
         }
     }
 
-    void dataerrln( const UnicodeString &message ) override {
+    void dataerrln(std::u16string_view message) override {
         test->assertFalse("Already saw an error", seenError);
         seenError = true;
-        test->assertEquals("Message for Error", expectedErrln, message);
+        test->assertEquals("Message for Error", std::u16string_view{expectedErrln}, message);
         if (!expectedDataErr) {
             test->errln("Got data error, but expected non-data error");
         }
